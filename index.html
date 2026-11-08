@@ -175,7 +175,7 @@ const LOGO="https://038parkingcenter.com/wp-content/uploads/2023/09/038-parking-
 const logoBlock=h=>'<span class="logo"><img src="'+LOGO+'" alt="038 Parking Center" style="height:'+h+'px" onerror="this.parentNode.classList.add(\'nf\')"><span class="lf">'+I.logo(Math.round(h*.7))+'<span><b>038</b><i>PARKING CENTER</i></span></span></span>';
 const FOOT='<p class="foot">© 038 Parking Center · Prishtinë</p>';
 const CIRC=n=>Array.from({length:n},(_,i)=>'<span class="circ c'+(i+1)+'" aria-hidden="true"></span>').join("");
-const authPage=(card,below)=>'<div class="ap">'+CIRC(3)+'<div class="apin">'+logoBlock(56)+'<div class="eyebrow">DIGITAL HR</div><h1>Kuleta juaj<br>digjitale personale</h1><div class="card">'+card+'</div>'+(below||'')+'<p class="foot">© 038 Parking Center · Prishtinë</p></div></div>';
+const authPage=(card,below)=>'<div class="ap">'+CIRC(3)+'<div class="apin">'+logoBlock(56)+'<h1 style="margin-top:34px">Digital HR</h1><div class="card">'+card+'</div>'+(below||'')+'<p class="foot">© 038 Parking Center · Prishtinë</p></div></div>';
 let ltype="",menu=false,sub=null,session=null,me=null,mode="in",tab="me",myAbs=[],profs=[],allAbs=[],armed=null,msg="",q="",flash="",recovering=false,editing=null;
 
 sb.auth.onAuthStateChange((ev,s)=>{
