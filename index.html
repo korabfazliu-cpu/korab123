@@ -102,7 +102,7 @@ const go=t=>{tab=t;draw()};
 
 function authView(){
   const su=mode=="up";
-  return '<div class="card auth"><h1>🩺 Pushimet Mjekësore</h1><p class="sub">'+(su?"Krijoni llogarinë tuaj. Hyrja aktivizohet pasi ta miratojë administratori.":"Hyni me llogarinë tuaj.")+'</p>'+
+  return '<div class="card auth"><h1>🩺 Pushimet Mjekësore</h1><p class="sub">'+(su?"Krijoni llogarinë tuaj. Hyrja aktivizohet pasi ta miratojë administratori.":"Hyni me llogarinë tuaj")+'</p>'+
   (su?'<label>Emri dhe mbiemri</label><input id="nm" autocomplete="name"><label>Pozita</label><input id="ps" placeholder="p.sh. Cashier, Pastrim, Mirëmbajtje">':'')+
   '<label>Email</label><input id="em" type="email" autocomplete="email"><label>Fjalëkalimi'+(su?" (minimumi 8 karaktere)":"")+'</label><input id="pw" type="password" autocomplete="'+(su?"new-password":"current-password")+'"><p class="err" id="err">'+esc(msg)+'</p>'+
   '<button class="p" id="sub" onclick="'+(su?"signup()":"signin()")+'">'+(su?"Regjistrohu":"Hyr")+'</button> <span class="lnk" onclick="mode=\''+(su?"in":"up")+'\';msg=\'\';draw()">'+(su?"Kam llogari":"Krijo llogari")+'</span></div>';
