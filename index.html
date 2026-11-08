@@ -97,7 +97,7 @@ button{cursor:pointer}
 .ent .txt div{font-size:12px;color:var(--mut)}
 .ent .act{display:flex;gap:8px;align-items:center;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end}
 .badge{display:inline-block;padding:3px 8px;border-radius:6px;font-size:11px;font-weight:700;white-space:nowrap}
-.w{background:var(--wbg);color:var(--wtx)}.o{background:var(--obg);color:var(--otx)}.t{background:var(--tint);color:var(--blue)}
+.w{background:var(--wbg);color:var(--wtx)}.r{background:#FDECEA;color:var(--bad)}.o{background:var(--obg);color:var(--otx)}.t{background:var(--tint);color:var(--blue)}
 .scroll{overflow-x:auto;margin:0 -18px}
 table{width:100%;border-collapse:collapse;font-size:14px}
 th{text-align:left;font-size:12px;font-weight:700;letter-spacing:.05em;color:var(--mut);background:var(--bg);padding:11px 12px;white-space:nowrap;text-transform:uppercase}
@@ -124,7 +124,11 @@ const $=s=>document.querySelector(s);
 const esc=s=>String(s==null?"":s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 const fmt=d=>d.split("-").reverse().join(".");
 const span=(a,b)=>Math.round((new Date(b)-new Date(a))/864e5)+1;
-const used=(es,k)=>(es||[]).filter(e=>e.from_date.slice(0,4)==Y&&e.leave_type==k).reduce((s,e)=>s+e.days,0);
+const st=e=>e.status||"approved";
+const sumY=(es,k,f)=>(es||[]).filter(e=>e.from_date.slice(0,4)==Y&&e.leave_type==k&&f(st(e))).reduce((s,e)=>s+e.days,0);
+const used=(es,k)=>sumY(es,k,s=>s=="approved");
+const held=(es,k)=>sumY(es,k,s=>s!="rejected");
+const STB={pending:'<span class="badge w">Në pritje</span>',approved:'<span class="badge o">Miratuar</span>',rejected:'<span class="badge r">Refuzuar</span>'};
 const T={vjetor:["Pushimi vjetor",20],mjekesor:["Pushimi mjekësor",20],martese:["Pushimi në rast martese",5],vdekje:["Pushimi në rast vdekjeje të anëtarit të ngushtë të familjes",5],lindje:["Pushim për lindje të fëmijës",3],gjak:["Pushim për dhënie vullnetare të gjakut",2],papagese:["Pushim pa pagesë",0],bartur:["Pushim i bartur nga viti paraprak",0],kompenzim:["Pushim me kompenzim",0]};
 const SPECIAL=["martese","vdekje","lindje","gjak"],OTHER=["papagese","bartur","kompenzim"];
 const MENU=[{k:"vjetor"},{k:"mjekesor"},{l:"Raste të veçanta",i:SPECIAL},{l:"Të tjera",i:OTHER}];
@@ -144,7 +148,7 @@ const I={
 const icoFor=k=>k=="mjekesor"?I.plus:k=="vjetor"?I.sun:I.cal;
 const logoBlock=s=>'<div class="logo">'+I.logo(s)+'<div><b>038</b><span>PARKING CENTER</span></div></div>';
 const FOOT='<p class="foot">© 038 Parking Center · Prishtinë</p>';
-let ltype="",menu=false,sub=null,session=null,me=null,mode="in",tab="me",myAbs=[],profs=[],allAbs=[],armed=null,msg="",q="";
+let ltype="",menu=false,sub=null,session=null,me=null,mode="in",tab="me",myAbs=[],profs=[],allAbs=[],armed=null,msg="",q="",flash="";
 
 sb.auth.onAuthStateChange((ev,s)=>{
   if(ev=="TOKEN_REFRESHED")return;
@@ -169,7 +173,7 @@ async function load(){
 }
 
 function shell(inner){
-  const adm=me.role=="admin",pend=profs.filter(x=>x.status=="pending").length;
+  const adm=me.role=="admin",pend=profs.filter(x=>x.status=="pending").length+allAbs.filter(a=>st(a)=="pending").length;
   let h='<div class="top"><div class="wrap"><span>Pushimet e Stafit · '+Y+'</span><span>'+(adm?"Administrator":"Punonjës")+'</span></div></div>';
   h+='<div class="bar"><div class="wrap">'+logoBlock(30)+'<button class="icon-btn" onclick="out()" aria-label="Dil" title="Dil">'+I.out+'</button></div></div>';
   h+='<div class="wrap who"><p class="mut">Mirë se vini,</p><h1>'+esc(me.full_name)+'</h1><p class="mut">'+esc(me.position)+'</p>';
@@ -219,7 +223,7 @@ const out=()=>sb.auth.signOut();
 
 function entry(e,del){
   const med=e.leave_type=="mjekesor";
-  const badge=med?(e.doc_path?'<span class="badge o">Me dëshmi</span>':'<span class="badge w">Pa dëshmi (≤3)</span>'):'';
+  const badge=STB[st(e)]+(med?(e.doc_path?'<span class="badge t">Me dëshmi</span>':'<span class="badge t">Pa dëshmi (≤3)</span>'):'');
   return '<div class="ent"><div class="ico">'+icoFor(e.leave_type)+'</div><div class="txt"><b>'+esc(T[e.leave_type][0])+'</b><div>'+fmt(e.from_date)+' – '+fmt(e.to_date)+' · '+e.days+' ditë</div>'+(e.note?'<div>'+esc(e.note)+'</div>':'')+'</div><div class="act">'+badge+(e.doc_path?'<button type="button" class="lnk" style="border:0;background:none;padding:0;font-size:13px" onclick="openDoc(\''+esc(e.doc_path)+'\')">Dëshmia</button>':'')+(del?'<button class="btn sm'+(armed==e.id?' danger':'')+'" onclick="del(\''+e.id+'\')">'+(armed==e.id?"Konfirmo?":"Fshi")+'</button>':'')+'</div></div>';
 }
 function menuHtml(){
@@ -227,26 +231,31 @@ function menuHtml(){
   if(menu)h+='<div class="menu">'+MENU.map((m,n)=>m.k?'<button type="button" class="mi" onclick="pick(\''+m.k+'\')"><span>'+esc(T[m.k][0])+'</span><span class="mut">'+T[m.k][1]+' ditë</span></button>':'<button type="button" class="mi" onclick="sub=sub===\''+n+'\'?null:\''+n+'\';draw()"><span>'+esc(m.l)+'</span><span>'+(sub===String(n)?"▾":"▸")+'</span></button>'+(sub===String(n)?m.i.map(k=>'<button type="button" class="mi si" onclick="pick(\''+k+'\')"><span>'+esc(T[k][0])+'</span>'+(T[k][1]?'<span class="mut">'+T[k][1]+' ditë</span>':'')+'</button>').join(""):"")).join("")+'</div>';
   return h;
 }
-function pick(k){ltype=k;menu=false;sub=null;draw()}
+function pick(k){ltype=k;menu=false;sub=null;flash="";draw()}
 function meView(){
-  const va=used(myAbs,"vjetor"),vm=used(myAbs,"mjekesor"),sp=SPECIAL.concat(OTHER).reduce((n,k)=>n+used(myAbs,k),0);
-  let h='<div class="card big"><div class="row1"><div><small>Pushimi vjetor</small><div class="n">'+(20-va)+'<span> / 20 ditë</span></div></div><small>në dispozicion</small></div><div class="meter"><i style="width:'+Math.min(100,va/20*100)+'%"></i></div><small>'+va+' ditë të shfrytëzuara</small></div>';
-  h+='<div class="minis"><div class="mini"><small>Mjekësor në dispozicion</small><b>'+(20-vm)+'<span> / 20</span></b></div><div class="mini"><small>Raste të veçanta e të tjera</small><b>'+sp+'<span> ditë</span></b></div></div>';
+  const va=used(myAbs,"vjetor"),ha=held(myAbs,"vjetor"),hm=held(myAbs,"mjekesor"),sp=SPECIAL.concat(OTHER).reduce((n,k)=>n+used(myAbs,k),0);
+  let h='<div class="card big"><div class="row1"><div><small>Pushimi vjetor</small><div class="n">'+(20-ha)+'<span> / 20 ditë</span></div></div><small>në dispozicion</small></div><div class="meter"><i style="width:'+Math.min(100,va/20*100)+'%"></i></div><small>'+va+' ditë të shfrytëzuara'+(ha>va?' · '+(ha-va)+' në pritje':'')+'</small></div>';
+  if(flash)h+='<div class="info" style="margin-top:0">'+I.info+'<span>'+esc(flash)+'</span></div>';
+  h+='<div class="minis"><div class="mini"><small>Mjekësor në dispozicion</small><b>'+(20-hm)+'<span> / 20</span></b></div><div class="mini"><small>Raste të veçanta e të tjera</small><b>'+sp+'<span> ditë</span></b></div></div>';
   h+='<div class="card"><h2>Raporto pushim</h2>'+menuHtml()+'<div class="row" style="margin-top:12px"><div><label for="from">Prej</label><input type="date" id="from" oninput="calc()"></div><div><label for="to">Deri</label><input type="date" id="to" oninput="calc()"></div><div><label for="days">Ditë</label><input type="number" id="days" min="1" max="20" oninput="calc(1)"></div></div><label for="note">Shënim (opsionale)</label><textarea id="note" rows="2"></textarea><div id="docbox" style="display:none"><div class="warn">'+I.warn+'<span><b>Mbi 3 ditë:</b> ngarkoni dëshminë e mjekut (PDF ose foto).</span></div><label for="file">Dëshmia e mjekut</label><input type="file" id="file" accept="application/pdf,image/*"></div><p class="mut" id="left" style="font-size:13px;margin-top:12px"></p><p class="err" id="err"></p><button class="btn p full" style="margin-top:4px" id="go" onclick="send()">Dërgo</button></div>';
   h+='<div class="card"><h2>Historiku</h2>'+(myAbs.length?myAbs.map(e=>entry(e,false)).join(""):'<p class="mut">Nuk ka pushime të regjistruara.</p>')+'</div>';
-  h+='<div class="card"><h2>Gjendja e pushimeve '+Y+'</h2><div class="scroll"><table><tr><th>Lloji i pushimit</th><th>Të lejuara</th><th>Të shfrytëzuara</th><th>Në dispozicion</th></tr>'+Object.keys(T).map(k=>{const a=T[k][1],u=used(myAbs,k);return '<tr><td class="wrapc">'+esc(T[k][0])+'</td><td>'+(a||"—")+'</td><td>'+u+'</td><td><b>'+(a?a-u:"—")+'</b></td></tr>'}).join("")+'</table></div></div>';
+  h+='<div class="card"><h2>Gjendja e pushimeve '+Y+'</h2><div class="scroll"><table><tr><th>Lloji i pushimit</th><th>Të lejuara</th><th>Të shfrytëzuara</th><th>Në dispozicion</th></tr>'+Object.keys(T).map(k=>{const a=T[k][1],u=used(myAbs,k),hh=held(myAbs,k);return '<tr><td class="wrapc">'+esc(T[k][0])+'</td><td>'+(a||"—")+'</td><td>'+u+(hh>u?' <span class="mut">(+'+(hh-u)+' në pritje)</span>':'')+'</td><td><b>'+(a?a-hh:"—")+'</b></td></tr>'}).join("")+'</table></div></div>';
   return h;
 }
 function reqView(){
-  const p=profs.filter(x=>x.status=="pending");
-  if(!p.length)return '<div class="card"><h2>Kërkesa për llogari</h2><p class="mut">Asnjë kërkesë në pritje.</p></div>';
-  return '<div class="card"><div class="hd"><h2>Kërkesa për llogari</h2><span class="badge t">'+p.length+' në pritje</span></div>'+p.map(x=>'<div class="req"><div style="display:flex;gap:12px;align-items:center"><span class="av">'+esc(ini(x.full_name))+'</span><div><b>'+esc(x.full_name)+'</b><div class="mut" style="font-size:13px">'+esc(x.position)+' · '+new Date(x.created_at).toLocaleDateString("sq")+'</div></div></div><div style="display:flex;gap:8px"><button class="btn p" onclick="setStatus(\''+x.id+'\',\'approved\')">Mirato</button><button class="btn" onclick="setStatus(\''+x.id+'\',\'rejected\')">Refuzo</button></div></div>').join("")+'</div>';
+  const p=profs.filter(x=>x.status=="pending"),la=allAbs.filter(a=>st(a)=="pending");
+  const nm=id=>profs.find(x=>x.id==id)||{};
+  let h='<div class="card"><div class="hd"><h2>Kërkesa për pushim</h2>'+(la.length?'<span class="badge t">'+la.length+' në pritje</span>':'')+'</div>';
+  h+=la.length?la.map(e=>{const s=nm(e.user_id),med=e.leave_type=="mjekesor";return '<div class="req"><div style="display:flex;gap:12px;align-items:center;min-width:0"><span class="av">'+esc(ini(s.full_name))+'</span><div style="min-width:0"><b>'+esc(s.full_name||"—")+'</b> <span class="mut" style="font-size:13px">· '+esc(s.position||"")+'</span><div style="font-size:14px">'+esc(T[e.leave_type][0])+'</div><div class="mut" style="font-size:13px">'+fmt(e.from_date)+' – '+fmt(e.to_date)+' · <b style="color:var(--tx)">'+e.days+' ditë</b>'+(T[e.leave_type][1]?' · të miratuara këtë vit: '+used(allAbs.filter(a=>a.user_id==e.user_id),e.leave_type)+'/'+T[e.leave_type][1]:'')+'</div>'+(e.note?'<div class="mut" style="font-size:13px">“'+esc(e.note)+'”</div>':'')+(e.doc_path?(true?'<button type="button" class="lnk" style="border:0;background:none;padding:0;font-size:13px" onclick="openDoc(\''+esc(e.doc_path)+'\')">Shiko dëshminë</button>':''):'')+'</div></div><div style="display:flex;gap:8px"><button class="btn p" onclick="setLeave(\''+e.id+'\',\'approved\')">Mirato</button><button class="btn" onclick="setLeave(\''+e.id+'\',\'rejected\')">Refuzo</button></div></div>'}).join(""):'<p class="mut">Asnjë kërkesë për pushim në pritje.</p>';
+  h+='</div><div class="card"><div class="hd"><h2>Kërkesa për llogari</h2>'+(p.length?'<span class="badge t">'+p.length+' në pritje</span>':'')+'</div>';
+  h+=p.length?p.map(x=>'<div class="req"><div style="display:flex;gap:12px;align-items:center"><span class="av">'+esc(ini(x.full_name))+'</span><div><b>'+esc(x.full_name)+'</b><div class="mut" style="font-size:13px">'+esc(x.position)+' · '+new Date(x.created_at).toLocaleDateString("sq")+'</div></div></div><div style="display:flex;gap:8px"><button class="btn p" onclick="setStatus(\''+x.id+'\',\'approved\')">Mirato</button><button class="btn" onclick="setStatus(\''+x.id+'\',\'rejected\')">Refuzo</button></div></div>').join(""):'<p class="mut">Asnjë kërkesë për llogari në pritje.</p>';
+  return h+'</div>';
 }
 function staffView(){
   const ap=profs.filter(x=>x.status=="approved");
-  const pend=profs.filter(x=>x.status=="pending").length,td=today(),mo=td.slice(0,7);
-  const away=new Set(allAbs.filter(a=>a.from_date<=td&&a.to_date>=td).map(a=>a.user_id)).size;
-  const medMo=allAbs.filter(a=>a.leave_type=="mjekesor"&&a.from_date.slice(0,7)==mo).reduce((s,a)=>s+a.days,0);
+  const pend=profs.filter(x=>x.status=="pending").length+allAbs.filter(a=>st(a)=="pending").length,td=today(),mo=td.slice(0,7);
+  const away=new Set(allAbs.filter(a=>st(a)=="approved"&&a.from_date<=td&&a.to_date>=td).map(a=>a.user_id)).size;
+  const medMo=allAbs.filter(a=>st(a)=="approved"&&a.leave_type=="mjekesor"&&a.from_date.slice(0,7)==mo).reduce((s,a)=>s+a.days,0);
   let h='<div class="stats"><div class="mini"><small>Punonjës aktivë</small><b>'+ap.length+'</b></div><div class="mini"><small>Në pushim sot</small><b>'+away+'</b></div><div class="mini"><small>Ditë mjekësore këtë muaj</small><b>'+medMo+'</b></div><button type="button" class="mini hot" onclick="go(\'req\')"><small>Kërkesa në pritje</small><b>'+pend+'</b></button></div>';
   if(!ap.length)return h+'<div class="card mut">Asnjë punonjës i miratuar.</div>';
   const by=id=>allAbs.filter(a=>a.user_id==id);
@@ -264,13 +273,13 @@ function calc(manual){
   const d=+$("#days").value;
   $("#docbox").style.display=(ltype=="mjekesor"&&d>3)?"block":"none";
   const a=ltype&&T[ltype][1];
-  $("#left").innerHTML=a?'Ju mbeten <b style="color:var(--tx)">'+(a-used(myAbs,ltype))+' ditë</b> për këtë lloj pushimi në '+Y+'.':'';
+  $("#left").innerHTML=a?'Ju mbeten <b style="color:var(--tx)">'+(a-held(myAbs,ltype))+' ditë</b> për këtë lloj pushimi në '+Y+'.':'';
 }
 async function send(){
   const f=$("#from").value,t=$("#to").value,d=+$("#days").value,note=$("#note").value.trim(),file=$("#file")&&$("#file").files[0],er=$("#err");
   er.textContent="";
   if(!ltype){er.textContent="Zgjidhni llojin e pushimit.";return}
-  const a=T[ltype][1],left=a?a-used(myAbs,ltype):1e9,med=ltype=="mjekesor"&&d>3;
+  const a=T[ltype][1],left=a?a-held(myAbs,ltype):1e9,med=ltype=="mjekesor"&&d>3;
   if(!f||!t||t<f||!(d>0)){er.textContent="Zgjidhni datat e sakta.";return}
   if(d>span(f,t)){er.textContent="Ditët nuk mund të jenë më shumë se periudha e zgjedhur.";return}
   if(d>left){er.textContent="Keni vetëm "+left+" ditë në dispozicion për këtë lloj pushimi.";return}
@@ -288,6 +297,7 @@ async function send(){
     er.textContent="Dërgimi dështoi: "+r.error.message;$("#go").disabled=false;return;
   }
   $("#from").value="";$("#to").value="";$("#days").value="";$("#note").value="";ltype="";
+  flash="Kërkesa u dërgua. Pushimi llogaritet pasi ta miratojë administratori.";
   await load();
 }
 async function del(id){
@@ -296,7 +306,8 @@ async function del(id){
   await sb.from("absences").delete().eq("id",id);
   load();
 }
-async function setStatus(id,st){await sb.from("profiles").update({status:st}).eq("id",id);load()}
+async function setStatus(id,s){await sb.from("profiles").update({status:s}).eq("id",id);load()}
+async function setLeave(id,s){const r=await sb.from("absences").update({status:s}).eq("id",id);if(r.error)alert("Veprimi dështoi: "+r.error.message);load()}
 async function openDoc(p){
   const w=window.open("","_blank");
   const {data,error}=await sb.storage.from("documents").createSignedUrl(p,120);
@@ -305,8 +316,8 @@ async function openDoc(p){
 }
 function csv(){
   const qq=v=>'"'+String(v==null?"":v).replace(/"/g,'""')+'"';
-  let c="Emri,Pozita,Lloji,Prej,Deri,Ditë,Dëshmi,Shënim\n";
-  allAbs.forEach(e=>{const s=profs.find(x=>x.id==e.user_id)||{};c+=[s.full_name,s.position,T[e.leave_type][0],e.from_date,e.to_date,e.days,e.doc_path?"Po":"Jo",e.note].map(qq).join(",")+"\n"});
+  let c="Emri,Pozita,Lloji,Prej,Deri,Ditë,Statusi,Dëshmi,Shënim\n";
+  allAbs.forEach(e=>{const s=profs.find(x=>x.id==e.user_id)||{};c+=[s.full_name,s.position,T[e.leave_type][0],e.from_date,e.to_date,e.days,{pending:"Në pritje",approved:"Miratuar",rejected:"Refuzuar"}[st(e)],e.doc_path?"Po":"Jo",e.note].map(qq).join(",")+"\n"});
   const a=document.createElement("a");a.href=URL.createObjectURL(new Blob(["\ufeff"+c],{type:"text/csv"}));a.download="pushimet-stafit-"+Y+".csv";a.click();
 }
 sb.auth.getSession().then(r=>{if(!r.data.session&&!session)draw()});
