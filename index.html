@@ -3,119 +3,139 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta name="theme-color" content="#0144FF">
-<title>Pushimet e Stafit · 038 Parking Center</title>
+<meta name="theme-color" content="#00246A">
+<title>Digital HR · 038 Parking Center</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 34 34%22><rect width=%2234%22 height=%2234%22 rx=%228%22 fill=%22%230144FF%22/><circle cx=%2211%22 cy=%2211%22 r=%225%22 fill=%22white%22/><circle cx=%2223%22 cy=%2211%22 r=%225%22 fill=%22white%22 opacity=%22.7%22/><circle cx=%2211%22 cy=%2223%22 r=%225%22 fill=%22white%22 opacity=%22.7%22/><circle cx=%2223%22 cy=%2223%22 r=%225%22 fill=%22white%22/></svg>">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <style>
-:root{--blue:#0144FF;--navy:#00246A;--bg:#F6F7F8;--card:#fff;--tx:#212529;--mut:#5F656B;--lbl:#3D434A;--bd:#DEE0E1;--tint:#E8EEFF;--onb:#DCE4FF;--wbg:#FFF3D6;--wtx:#7A4A00;--obg:#E3F5EA;--otx:#11602F;--bad:#B42318}
+:root{--blue:#0144FF;--navy:#00246A;--bg:#F0F3F9;--card:#fff;--tx:#212529;--mut:#5F656B;--lbl:#3D434A;--bd:#E3E7EE;--tint:#E8EEFF;--onb:#B9C8F5;--soft:#F0F3F9;--wbg:#FFF3D6;--wtx:#7A4A00;--obg:#E3F5EA;--otx:#11602F;--bad:#B42318}
 *{box-sizing:border-box}
 html,body{margin:0;background:var(--bg);color:var(--tx);font:15px/1.5 Montserrat,system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
-button,input,textarea{font:inherit;color:inherit}
+button,input,textarea,select{font:inherit;color:inherit}
 h1,h2,p{margin:0}
 a,.lnk{color:var(--blue);cursor:pointer;font-weight:700;text-decoration:none}
+.lnk{border:0;background:none;padding:0}
 .lnk:hover,a:hover{color:var(--navy)}
 .mut{color:var(--mut)}
 .wrap{max-width:1000px;margin:0 auto;padding:0 16px}
-.logo{display:flex;align-items:center;gap:10px;color:#fff}
-.logo b{display:block;font-weight:800;font-size:15px;letter-spacing:.04em;line-height:1}
-.logo span{display:block;font-weight:700;font-size:10px;letter-spacing:.12em;line-height:1.2}
-.hero{background:var(--blue);padding:48px 0 88px}
-.hero h1{color:#fff;font-size:30px;line-height:1.15;font-weight:800;margin-top:28px}
-.hero p{color:var(--onb);margin-top:8px;max-width:360px}
-.auth{max-width:440px;margin:-56px auto 0;padding:0 16px}
-.auth .card{padding:26px 22px;box-shadow:0 12px 32px rgba(0,36,106,.12);border:0}
-.info{display:flex;gap:12px;align-items:flex-start;background:var(--tint);color:var(--navy);border-radius:12px;padding:14px 16px;font-size:13px;margin-top:16px}
+.logo{display:inline-flex;align-items:center}
+.logo img{display:block;width:auto}
+.logo .lf{display:none;align-items:center;gap:10px;color:#fff}
+.logo .lf b{display:block;font-weight:800;font-size:15px;letter-spacing:.04em;line-height:1}
+.logo .lf i{display:block;font-style:normal;font-weight:700;font-size:10px;letter-spacing:.12em;line-height:1.2}
+.logo.nf img{display:none}.logo.nf .lf{display:flex}
+.circ{position:absolute;border-radius:50%;background:var(--blue);pointer-events:none}
+/* auth pages */
+.ap{position:relative;overflow:hidden;min-height:100vh;background:var(--navy);color:#fff}
+.ap .c1{width:320px;height:320px;right:-150px;top:-90px;opacity:.55}
+.ap .c2{width:220px;height:220px;right:-40px;top:170px;opacity:.35}
+.ap .c3{width:180px;height:180px;left:-90px;bottom:120px;opacity:.25}
+.apin{position:relative;max-width:440px;margin:0 auto;padding:56px 20px 8px}
+.eyebrow{font-size:12px;font-weight:700;letter-spacing:.16em;color:#7FA6FF;margin-top:34px}
+.ap h1{font-size:32px;line-height:1.15;font-weight:800;margin-top:8px}
+.ap .card{margin-top:28px;background:#fff;color:var(--tx);border:0;border-radius:24px;padding:24px 20px;box-shadow:0 20px 40px rgba(0,0,0,.25)}
+.ap .card h2{font-size:18px;font-weight:700;margin:0 0 4px}
+.below{text-align:center;font-size:14px;color:var(--onb);margin-top:20px}
+.below .lnk{color:#7FA6FF}.below .lnk:hover{color:#fff}
+.ap .info{background:rgba(255,255,255,.08);color:#DCE4FF}
+.info{display:flex;gap:12px;align-items:flex-start;background:var(--tint);color:var(--navy);border-radius:16px;padding:14px 16px;font-size:13px;margin-top:16px}
 .foot{text-align:center;font-size:12px;color:var(--mut);padding:28px 16px}
-.top{background:var(--navy);color:var(--onb);font-size:13px}
-.top .wrap{display:flex;justify-content:space-between;gap:8px;padding-top:8px;padding-bottom:8px;flex-wrap:wrap}
-.bar{background:var(--blue)}
-.bar .wrap{display:flex;align-items:center;justify-content:space-between;gap:12px;padding-top:14px;padding-bottom:14px;flex-wrap:wrap}
-.icon-btn{width:44px;height:44px;border-radius:22px;border:1px solid rgba(255,255,255,.35);background:transparent;display:inline-flex;align-items:center;justify-content:center;cursor:pointer}
-.tabs{display:flex;gap:4px;flex-wrap:wrap;background:var(--blue);border-radius:12px;padding:6px;margin-top:14px}
-.tabs button{border:0;background:transparent;color:#fff;font-size:13px;font-weight:700;letter-spacing:.06em;padding:11px 14px;border-radius:8px;cursor:pointer;display:inline-flex;gap:8px;align-items:center}
-.tabs button.on{background:#fff;color:var(--blue)}
-.tabs .cnt{background:#fff;color:var(--blue);border-radius:10px;padding:0 7px;font-size:12px}
-.tabs button.on .cnt{background:var(--blue);color:#fff}
-.who{padding:22px 16px 4px}
-.who h1{font-size:24px;font-weight:800}
-main.wrap{padding-top:20px;padding-bottom:20px;display:flex;flex-direction:column;gap:16px}
-.card{background:var(--card);border:1px solid var(--bd);border-radius:14px;padding:18px}
+.ap .foot{color:var(--onb)}
+/* app header */
+.nhead{position:relative;overflow:hidden;background:var(--navy);color:#fff;padding-bottom:84px}
+.nhead .c1{width:260px;height:260px;right:-110px;top:-100px;opacity:.5}
+.nhead .c2{width:140px;height:140px;right:22%;bottom:-60px;opacity:.3}
+.nhead .wrap{position:relative}
+.hrow{display:flex;align-items:center;justify-content:space-between;gap:12px;padding-top:22px}
+.icon-btn{width:44px;height:44px;border-radius:22px;border:0;background:rgba(255,255,255,.12);display:inline-flex;align-items:center;justify-content:center;cursor:pointer}
+.icon-btn:hover{background:rgba(255,255,255,.2)}
+.who{margin-top:24px}
+.who p{font-size:13px;color:var(--onb)}
+.who h1{font-size:24px;font-weight:800;margin:2px 0}
+.tabs{display:flex;gap:6px;flex-wrap:wrap;margin-top:18px}
+.tabs button{border:0;background:rgba(255,255,255,.1);color:#fff;font-size:13px;font-weight:700;padding:10px 16px;border-radius:999px;cursor:pointer;display:inline-flex;gap:8px;align-items:center}
+.tabs button:hover{background:rgba(255,255,255,.18)}
+.tabs button.on{background:#fff;color:var(--navy)}
+.tabs .cnt{background:var(--blue);color:#fff;border-radius:10px;padding:0 7px;font-size:12px}
+main.wrap{position:relative;margin-top:-64px;padding-bottom:20px;display:flex;flex-direction:column;gap:14px}
+/* cards */
+.card{background:var(--card);border:0;border-radius:20px;padding:18px;box-shadow:0 4px 14px rgba(0,36,106,.06)}
 .card h2{font-size:16px;font-weight:700;margin-bottom:12px}
 .hd{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:12px}
 .hd h2{margin:0}
-.big{background:var(--blue);color:#fff;border:0;box-shadow:0 14px 30px rgba(1,68,255,.28)}
-.big .row1{display:flex;justify-content:space-between;align-items:flex-end;gap:8px}
-.big small{color:var(--onb);font-size:13px;font-weight:600}
-.big .n{font-size:40px;font-weight:800;line-height:1}
-.big .n span{font-size:16px;font-weight:600}
-.meter{height:8px;border-radius:4px;background:rgba(255,255,255,.25);overflow:hidden;margin:14px 0 8px}
-.meter i{display:block;height:100%;background:#fff;border-radius:4px}
-.minis{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
-.mini{background:#fff;border:1px solid var(--bd);border-radius:14px;padding:14px}
+.big{display:flex;gap:18px;align-items:center;border-radius:24px;padding:20px;box-shadow:0 14px 32px rgba(0,36,106,.14)}
+.ring{width:96px;height:96px;border-radius:50%;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.ring>div{width:74px;height:74px;border-radius:50%;background:#fff;display:flex;flex-direction:column;align-items:center;justify-content:center}
+.ring b{font-size:26px;line-height:1}.ring span{font-size:11px;color:var(--mut)}
+.big h2{margin:0 0 4px}.big p{font-size:13px;color:var(--mut)}
+.minis{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+.mini{background:#fff;border:0;border-radius:20px;padding:16px;box-shadow:0 4px 14px rgba(0,36,106,.06)}
 .mini small{display:block;font-size:12px;font-weight:600;color:var(--mut)}
-.mini b{font-size:22px;font-weight:800}
+.mini b{font-size:24px;font-weight:800}
 .mini b span{font-size:13px;font-weight:600;color:var(--mut)}
 .stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px}
 .stats .mini b{font-size:30px}
-.stats .mini.hot{background:var(--blue);border-color:var(--blue);cursor:pointer;text-align:left;font:inherit}
+.stats .mini.hot{background:var(--blue);cursor:pointer;text-align:left;font:inherit;border:0}
 .stats .mini.hot b{color:#fff}
-.stats .mini.hot small{color:var(--onb)}
+.stats .mini.hot small{color:#DCE4FF}
+/* forms */
 label{display:block;font-size:13px;font-weight:600;color:var(--lbl);margin:12px 0 6px}
-input,textarea{width:100%;height:48px;border:1.5px solid var(--bd);border-radius:10px;padding:0 14px;background:#fff;font-size:15px}
-textarea{height:auto;padding:12px 14px;resize:vertical}
-input:focus,textarea:focus,.sel:focus-visible{outline:none;border-color:var(--blue);box-shadow:0 0 0 3px rgba(1,68,255,.15)}
-input[type=file]{height:auto;padding:12px;border-style:dashed;border-color:var(--blue);color:var(--blue);font-weight:600}
-.row{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr) 88px;gap:10px}
+input,textarea,select{width:100%;height:50px;border:1.5px solid transparent;border-radius:25px;padding:0 18px;background:var(--soft);font-size:15px}
+textarea{height:auto;padding:12px 18px;border-radius:18px;resize:vertical}
+input:focus,textarea:focus,select:focus,.sel:focus-visible{outline:none;border-color:var(--blue);background:#fff;box-shadow:0 0 0 3px rgba(1,68,255,.15)}
+input[type=file]{height:auto;padding:12px 16px;border:1.5px dashed var(--blue);border-radius:18px;background:#fff;color:var(--blue);font-weight:600}
+.row{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr) 92px;gap:10px}
 .row input{min-width:0}
 .row label{margin-top:0}
+.row.r3{grid-template-columns:repeat(3,minmax(0,1fr))}
 button{cursor:pointer}
-.btn{height:44px;padding:0 18px;border-radius:10px;border:1.5px solid var(--bd);background:#fff;font-weight:600;display:inline-flex;align-items:center;justify-content:center;gap:8px}
+.btn{height:44px;padding:0 20px;border-radius:999px;border:1.5px solid var(--bd);background:#fff;font-weight:600;display:inline-flex;align-items:center;justify-content:center;gap:8px}
+.btn:hover{border-color:#C9D1DE}
 .btn.p{background:var(--blue);border-color:var(--blue);color:#fff;font-weight:700}
+.btn.p:hover{background:#0038D6;border-color:#0038D6}
 .btn.ol{border-color:var(--blue);color:var(--blue);font-weight:700}
-.btn.full{width:100%;height:52px;font-size:16px}
-.btn.sm{height:36px;padding:0 12px;font-size:13px}
+.btn.full{width:100%;height:54px;font-size:16px;box-shadow:0 10px 24px rgba(1,68,255,.3)}
+.btn.sm{height:36px;padding:0 14px;font-size:13px}
 .btn.danger{border-color:var(--bad);color:var(--bad)}
 .btn:disabled{opacity:.55;cursor:default}
-.sel{width:100%;height:48px;text-align:left;border:1.5px solid var(--bd);border-radius:10px;background:#fff;padding:0 14px;display:flex;justify-content:space-between;align-items:center;font-size:15px}
+.sel{width:100%;height:50px;text-align:left;border:1.5px solid transparent;border-radius:25px;background:var(--soft);padding:0 18px;display:flex;justify-content:space-between;align-items:center;font-size:15px}
 .sel.ph{color:var(--mut)}
-.menu{border:1px solid var(--bd);border-radius:10px;margin-top:6px;overflow:hidden;background:#fff}
-.mi{width:100%;border:0;border-top:1px solid var(--bd);background:#fff;text-align:left;padding:13px 14px;display:flex;justify-content:space-between;gap:8px;font-size:14px}
+.menu{border:1px solid var(--bd);border-radius:18px;margin-top:8px;overflow:hidden;background:#fff;box-shadow:0 10px 24px rgba(0,36,106,.1)}
+.mi{width:100%;border:0;border-top:1px solid var(--bd);background:#fff;text-align:left;padding:13px 18px;display:flex;justify-content:space-between;gap:8px;font-size:14px}
 .mi:first-child{border-top:0}
 .mi:hover{background:var(--tint)}
-.si{padding-left:30px;background:#FAFBFC}
-.warn{display:flex;gap:10px;align-items:flex-start;background:#FFF8E6;border:1.5px solid #F2C14E;color:#5C3800;padding:12px 14px;border-radius:12px;margin-top:14px;font-size:13px}
+.si{padding-left:34px;background:#FAFBFD}
+.warn{display:flex;gap:10px;align-items:flex-start;background:#FFF8E6;color:#5C3800;padding:12px 14px;border-radius:16px;margin-top:14px;font-size:13px}
 .err{color:var(--bad);min-height:20px;margin-top:10px;font-size:13px;font-weight:600}
 .err.ok{color:var(--otx)}
-.ent{display:flex;flex-wrap:wrap;gap:12px;align-items:center;padding:12px 0;border-top:1px solid var(--bd)}
-select{width:100%;height:48px;border:1.5px solid var(--bd);border-radius:10px;padding:0 12px;background:#fff;font:inherit;font-size:15px;color:inherit}
-.edit{flex-basis:100%;width:100%;border-top:1px dashed var(--bd);margin-top:4px;padding-top:4px}
-.row.r3{grid-template-columns:repeat(3,minmax(0,1fr))}
-.edit .acts{display:flex;gap:8px;flex-wrap:wrap;margin-top:6px}
-.cmt{font-size:13px;color:var(--navy);background:var(--tint);border-radius:8px;padding:6px 10px;margin-top:6px}
+/* lists */
+.ent{display:flex;flex-wrap:wrap;gap:12px;align-items:center;padding:12px 0;border-top:1px solid #EEF1F6}
 .ent:first-of-type{border-top:0;padding-top:0}
-.ico{width:40px;height:40px;border-radius:10px;background:var(--tint);display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.ico{width:40px;height:40px;border-radius:50%;background:var(--tint);display:flex;align-items:center;justify-content:center;flex-shrink:0}
 .ent .txt{flex-grow:1;min-width:0}
 .ent .txt b{display:block;font-size:14px}
 .ent .txt div{font-size:12px;color:var(--mut)}
 .ent .act{display:flex;gap:8px;align-items:center;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end}
-.badge{display:inline-block;padding:3px 8px;border-radius:6px;font-size:11px;font-weight:700;white-space:nowrap}
+.edit{flex-basis:100%;width:100%;border-top:1px dashed var(--bd);margin-top:4px;padding-top:4px}
+.edit .acts{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px}
+.cmt{font-size:13px;color:var(--navy);background:var(--tint);border-radius:12px;padding:6px 10px;margin-top:6px}
+.badge{display:inline-block;padding:4px 10px;border-radius:12px;font-size:11px;font-weight:700;white-space:nowrap}
 .w{background:var(--wbg);color:var(--wtx)}.r{background:#FDECEA;color:var(--bad)}.o{background:var(--obg);color:var(--otx)}.t{background:var(--tint);color:var(--blue)}
 .scroll{overflow-x:auto;margin:0 -18px}
 table{width:100%;border-collapse:collapse;font-size:14px}
-th{text-align:left;font-size:12px;font-weight:700;letter-spacing:.05em;color:var(--mut);background:var(--bg);padding:11px 12px;white-space:nowrap;text-transform:uppercase}
-td{padding:12px;border-top:1px solid var(--bd);white-space:nowrap}
+th{text-align:left;font-size:12px;font-weight:700;letter-spacing:.05em;color:var(--mut);background:#F7F9FC;padding:11px 12px;white-space:nowrap;text-transform:uppercase}
+td{padding:12px;border-top:1px solid #EEF1F6;white-space:nowrap}
 th:first-child,td:first-child{padding-left:18px}th:last-child,td:last-child{padding-right:18px}
 td.wrapc{white-space:normal}
 .av{width:36px;height:36px;border-radius:18px;background:var(--tint);color:var(--blue);font-weight:700;font-size:13px;display:inline-flex;align-items:center;justify-content:center;flex-shrink:0}
 .pm{display:flex;align-items:center;gap:8px}
 .pm i{display:block;width:64px;height:6px;border-radius:3px;background:var(--tint);overflow:hidden}
 .pm i em{display:block;height:100%;background:var(--blue)}
-.req{border:1px solid var(--bd);border-radius:12px;padding:14px;display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;margin-top:10px}
+.req{border:1px solid #EEF1F6;border-radius:18px;padding:14px;display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;margin-top:10px}
 .sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
-@media (max-width:480px){.row{grid-template-columns:minmax(0,1fr) minmax(0,1fr)}.row>div:last-child{grid-column:1/-1}.hero h1{font-size:26px}.row.r3{grid-template-columns:1fr}.ent{flex-wrap:wrap}.ent .act{width:100%;justify-content:flex-start;padding-left:52px}.ent .act:empty{display:none}}
+@media (max-width:480px){.row{grid-template-columns:minmax(0,1fr) minmax(0,1fr)}.row>div:last-child{grid-column:1/-1}.row.r3{grid-template-columns:1fr}.ap h1{font-size:28px}.ent .act{width:100%;justify-content:flex-start;padding-left:52px}.ent .act:empty{display:none}}
 </style>
 </head>
 <body>
@@ -151,8 +171,11 @@ const I={
   down:'<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>'
 };
 const icoFor=k=>k=="mjekesor"?I.plus:k=="vjetor"?I.sun:I.cal;
-const logoBlock=s=>'<div class="logo">'+I.logo(s)+'<div><b>038</b><span>PARKING CENTER</span></div></div>';
+const LOGO="https://038parkingcenter.com/wp-content/uploads/2023/09/038-parking-logo-white.png";
+const logoBlock=h=>'<span class="logo"><img src="'+LOGO+'" alt="038 Parking Center" style="height:'+h+'px" onerror="this.parentNode.classList.add(\'nf\')"><span class="lf">'+I.logo(Math.round(h*.7))+'<span><b>038</b><i>PARKING CENTER</i></span></span></span>';
 const FOOT='<p class="foot">© 038 Parking Center · Prishtinë</p>';
+const CIRC=n=>Array.from({length:n},(_,i)=>'<span class="circ c'+(i+1)+'" aria-hidden="true"></span>').join("");
+const authPage=(card,below)=>'<div class="ap">'+CIRC(3)+'<div class="apin">'+logoBlock(56)+'<div class="eyebrow">DIGITAL HR</div><h1>Kuleta juaj<br>digjitale personale</h1><div class="card">'+card+'</div>'+(below||'')+'<p class="foot">© 038 Parking Center · Prishtinë</p></div></div>';
 let ltype="",menu=false,sub=null,session=null,me=null,mode="in",tab="me",myAbs=[],profs=[],allAbs=[],armed=null,msg="",q="",flash="",recovering=false,editing=null;
 
 sb.auth.onAuthStateChange((ev,s)=>{
@@ -180,11 +203,10 @@ async function load(){
 
 function shell(inner){
   const adm=me.role=="admin",pend=profs.filter(x=>x.status=="pending").length+allAbs.filter(a=>st(a)=="pending").length;
-  let h='<div class="top"><div class="wrap"><span>Kuleta digjitale personale</span><span>'+(adm?"Administrator":"Punonjës")+'</span></div></div>';
-  h+='<div class="bar"><div class="wrap">'+logoBlock(30)+'<button class="icon-btn" onclick="out()" aria-label="Dil" title="Dil">'+I.out+'</button></div></div>';
-  h+='<div class="wrap who"><p class="mut">Mirë se vini,</p><h1>'+esc(me.full_name)+'</h1><p class="mut">'+esc(me.position)+'</p>';
-  if(adm)h+='<nav class="tabs" aria-label="Seksionet"><button class="'+(tab=="req"?"on":"")+'" onclick="go(\'req\')">KËRKESAT'+(pend?' <span class="cnt">'+pend+'</span>':'')+'</button><button class="'+(tab=="staff"?"on":"")+'" onclick="go(\'staff\')">STAFI</button><button class="'+(tab=="me"?"on":"")+'" onclick="go(\'me\')">PUSHIMET E MIA</button></nav>';
-  return h+'</div><main class="wrap">'+inner+'</main>'+FOOT;
+  let h='<header class="nhead">'+CIRC(2)+'<div class="wrap"><div class="hrow">'+logoBlock(36)+'<button class="icon-btn" onclick="out()" aria-label="Dil" title="Dil">'+I.out+'</button></div>';
+  h+='<div class="who"><p>Mirë se vini,</p><h1>'+esc(me.full_name)+'</h1><p>'+esc(me.position)+' · Kuleta digjitale personale</p></div>';
+  if(adm)h+='<nav class="tabs" aria-label="Seksionet"><button class="'+(tab=="req"?"on":"")+'" onclick="go(\'req\')">Kërkesat'+(pend?' <span class="cnt">'+pend+'</span>':'')+'</button><button class="'+(tab=="staff"?"on":"")+'" onclick="go(\'staff\')">Stafi</button><button class="'+(tab=="me"?"on":"")+'" onclick="go(\'me\')">Pushimet e mia</button></nav>';
+  return h+'</div></header><main class="wrap">'+inner+'</main>'+FOOT;
 }
 
 function draw(){
@@ -192,9 +214,9 @@ function draw(){
   const app=$("#app");
   if(recovering&&session)return app.innerHTML=recoverView();
   if(!session)return app.innerHTML=authView();
-  if(!me)return app.innerHTML='<div class="hero"><div class="wrap">'+logoBlock(34)+'</div></div><div class="auth"><div class="card"><p>Duke ngarkuar profilin…</p><button class="btn" style="margin-top:14px" onclick="out()">Dil</button></div></div>';
+  if(!me)return app.innerHTML=authPage('<p>Duke ngarkuar profilin…</p><button class="btn" style="margin-top:14px" onclick="out()">Dil</button>');
   if(me.status!="approved"){
-    return app.innerHTML='<div class="hero"><div class="wrap">'+logoBlock(34)+'<h1>Pushimet<br>e Stafit</h1></div></div><div class="auth"><div class="card"><h2 style="font-size:20px;margin-bottom:8px">'+(me.status=="pending"?"Llogaria pret miratimin":"Llogaria u refuzua")+'</h2><p class="mut">'+(me.status=="pending"?"Administratori duhet ta miratojë llogarinë tuaj para se të hyni. Kthehuni më vonë.":"Administratori nuk e miratoi këtë llogari. Kontaktoni menaxherin.")+'</p><div style="display:flex;gap:8px;margin-top:18px"><button class="btn p" onclick="load()">Rifresko</button><button class="btn" onclick="out()">Dil</button></div></div></div>'+FOOT;
+    return app.innerHTML=authPage('<h2>'+(me.status=="pending"?"Llogaria pret miratimin":"Llogaria u refuzua")+'</h2><p class="mut">'+(me.status=="pending"?"Administratori duhet ta miratojë llogarinë tuaj para se të hyni. Kthehuni më vonë.":"Administratori nuk e miratoi këtë llogari. Kontaktoni menaxherin.")+'</p><div style="display:flex;gap:8px;margin-top:18px"><button class="btn p" onclick="load()">Rifresko</button><button class="btn" onclick="out()">Dil</button></div>');
   }
   const adm=me.role=="admin";
   app.innerHTML=shell(adm&&tab=="req"?reqView():adm&&tab=="staff"?staffView():meView());
@@ -203,19 +225,17 @@ function draw(){
 const go=t=>{tab=t;menu=false;draw()};
 
 function authView(){
-  const su=mode=="up",fg=mode=="forgot";
-  const hero='<div class="hero"><div class="wrap">'+logoBlock(34)+'<h1>Pushimet<br>e Stafit</h1><p>Raportoni pushimet dhe ndiqni ditët në dispozicion.</p></div></div>';
-  if(fg)return hero+'<div class="auth"><div class="card"><h2 style="font-size:20px;margin:0 0 4px">Rivendosni fjalëkalimin</h2><p class="mut" style="font-size:14px">Shkruani email-in me të cilin jeni regjistruar. Do t’ju dërgojmë një link për të vendosur fjalëkalim të ri.</p><label for="em">Email</label><input id="em" type="email" autocomplete="email" onkeydown="if(event.key==\'Enter\')$(\'#sub\').click()"><p class="err'+(msg?" ok":"")+'" id="err">'+esc(msg)+'</p><button class="btn p full" style="margin-top:6px" id="sub" onclick="forgot()">Dërgo linkun</button><p class="mut" style="text-align:center;font-size:14px;margin-top:16px"><button type="button" class="lnk" style="border:0;background:none;padding:0" onclick="mode=\'in\';msg=\'\';draw()">Kthehu te hyrja</button></p></div></div>'+FOOT;
-  return hero+
-  '<div class="auth"><div class="card"><h2 style="font-size:20px;margin:0 0 4px">'+(su?"Krijoni llogarinë tuaj":"Hyni me llogarinë tuaj")+'</h2>'+(su?'<p class="mut" style="font-size:14px">Hyrja aktivizohet pasi ta miratojë administratori.</p>':'')+
+  const su=mode=="up",fg=mode=="forgot",ent=' onkeydown="if(event.key==\'Enter\')$(\'#sub\').click()"';
+  const sw=(m,t)=>'<button type="button" class="lnk" onclick="mode=\''+m+'\';msg=\'\';draw()">'+t+'</button>';
+  if(fg)return authPage('<h2>Rivendosni fjalëkalimin</h2><p class="mut" style="font-size:14px">Shkruani email-in me të cilin jeni regjistruar. Do t’ju dërgojmë një link për të vendosur fjalëkalim të ri.</p><label for="em">Email</label><input id="em" type="email" autocomplete="email"'+ent+'><p class="err'+(msg?" ok":"")+'" id="err">'+esc(msg)+'</p><button class="btn p full" style="margin-top:6px" id="sub" onclick="forgot()">Dërgo linkun</button>','<p class="below">'+sw("in","Kthehu te hyrja")+'</p>');
+  return authPage('<h2>'+(su?"Krijoni llogarinë tuaj":"Hyni me llogarinë tuaj")+'</h2>'+(su?'<p class="mut" style="font-size:14px">Hyrja aktivizohet pasi ta miratojë administratori.</p>':'')+
   (su?'<label for="nm">Emri dhe mbiemri</label><input id="nm" autocomplete="name"><label for="ps">Pozita</label><input id="ps" placeholder="p.sh. Cashier, Pastrim, Mirëmbajtje">':'')+
-  '<label for="em">Email</label><input id="em" type="email" autocomplete="email"><label for="pw">Fjalëkalimi'+(su?" (minimumi 8 karaktere)":"")+'</label><input id="pw" type="password" autocomplete="'+(su?"new-password":"current-password")+'" onkeydown="if(event.key==\'Enter\')$(\'#sub\').click()">'+(su?'':'<p style="text-align:right;margin-top:8px;font-size:13px"><button type="button" class="lnk" style="border:0;background:none;padding:0" onclick="mode=\'forgot\';msg=\'\';draw()">Keni harruar fjalëkalimin?</button></p>')+'<p class="err'+(msg&&!su?" ok":"")+'" id="err">'+esc(msg)+'</p>'+
-  '<button class="btn p full" style="margin-top:6px" id="sub" onclick="'+(su?"signup()":"signin()")+'">'+(su?"Regjistrohu":"Hyr")+'</button>'+
-  '<p class="mut" style="text-align:center;font-size:14px;margin-top:16px">'+(su?"Keni llogari? ":"Nuk keni llogari? ")+'<button type="button" class="lnk" style="border:0;background:none;padding:0" onclick="mode=\''+(su?"in":"up")+'\';msg=\'\';draw()">'+(su?"Hyni":"Krijo llogari")+'</button></p></div>'+
-  '<div class="info">'+I.info+'<span>Llogaritë e reja aktivizohen pasi t’i miratojë administratori.</span></div></div>'+FOOT;
+  '<label for="em">Email</label><input id="em" type="email" autocomplete="email"><label for="pw">Fjalëkalimi'+(su?" (minimumi 8 karaktere)":"")+'</label><input id="pw" type="password" autocomplete="'+(su?"new-password":"current-password")+'"'+ent+'>'+(su?'':'<p style="text-align:right;margin-top:10px;font-size:13px">'+sw("forgot","Keni harruar fjalëkalimin?")+'</p>')+'<p class="err'+(msg&&!su?" ok":"")+'" id="err">'+esc(msg)+'</p>'+
+  '<button class="btn p full" style="margin-top:6px" id="sub" onclick="'+(su?"signup()":"signin()")+'">'+(su?"Regjistrohu":"Hyr")+'</button>',
+  '<p class="below">'+(su?"Keni llogari? ":"Nuk keni llogari? ")+sw(su?"in":"up",su?"Hyni":"Krijo llogari")+'</p><div class="info">'+I.info+'<span>Llogaritë e reja aktivizohen pasi t’i miratojë administratori.</span></div>');
 }
 function recoverView(){
-  return '<div class="hero"><div class="wrap">'+logoBlock(34)+'<h1>Pushimet<br>e Stafit</h1></div></div><div class="auth"><div class="card"><h2 style="font-size:20px;margin:0 0 4px">Vendosni fjalëkalim të ri</h2><p class="mut" style="font-size:14px">Minimumi 8 karaktere.</p><label for="np">Fjalëkalimi i ri</label><input id="np" type="password" autocomplete="new-password"><label for="np2">Përsëriteni fjalëkalimin</label><input id="np2" type="password" autocomplete="new-password" onkeydown="if(event.key==\'Enter\')$(\'#sub\').click()"><p class="err" id="err"></p><button class="btn p full" style="margin-top:6px" id="sub" onclick="savePw()">Ruaj fjalëkalimin</button></div></div>'+FOOT;
+  return authPage('<h2>Vendosni fjalëkalim të ri</h2><p class="mut" style="font-size:14px">Minimumi 8 karaktere.</p><label for="np">Fjalëkalimi i ri</label><input id="np" type="password" autocomplete="new-password"><label for="np2">Përsëriteni fjalëkalimin</label><input id="np2" type="password" autocomplete="new-password" onkeydown="if(event.key==\'Enter\')$(\'#sub\').click()"><p class="err" id="err"></p><button class="btn p full" style="margin-top:6px" id="sub" onclick="savePw()">Ruaj fjalëkalimin</button>');
 }
 async function forgot(){
   const e=$("#em").value.trim(),er=$("#err");er.className="err";er.textContent="";
@@ -264,9 +284,10 @@ function menuHtml(){
 function pick(k){ltype=k;menu=false;sub=null;flash="";draw()}
 function meView(){
   const va=used(myAbs,"vjetor"),ha=held(myAbs,"vjetor"),hm=held(myAbs,"mjekesor"),sp=SPECIAL.concat(OTHER).reduce((n,k)=>n+used(myAbs,k),0);
-  let h='<div class="card big"><div class="row1"><div><small>Pushimi vjetor</small><div class="n">'+(20-ha)+'<span> / 20 ditë</span></div></div><small>në dispozicion</small></div><div class="meter"><i style="width:'+Math.min(100,va/20*100)+'%"></i></div><small>'+va+' ditë të shfrytëzuara'+(ha>va?' · '+(ha-va)+' në pritje':'')+'</small></div>';
+  const fr=Math.max(0,Math.min(100,(20-ha)/20*100));
+  let h='<div class="card big"><div class="ring" role="img" aria-label="'+(20-ha)+' nga 20 ditë në dispozicion" style="background:conic-gradient(var(--blue) 0 '+fr+'%,var(--tint) '+fr+'% 100%)"><div><b>'+(20-ha)+'</b><span>nga 20</span></div></div><div><h2>Pushimi vjetor</h2><p>'+(20-ha)+' ditë në dispozicion<br>'+va+' të shfrytëzuara'+(ha>va?' · '+(ha-va)+' në pritje':'')+'</p></div></div>';
   if(flash)h+='<div class="info" style="margin-top:0">'+I.info+'<span>'+esc(flash)+'</span></div>';
-  h+='<div class="minis"><div class="mini"><small>Mjekësor në dispozicion</small><b>'+(20-hm)+'<span> / 20</span></b></div><div class="mini"><small>Raste të veçanta e të tjera</small><b>'+sp+'<span> ditë</span></b></div></div>';
+  h+='<div class="minis"><div class="mini"><small>Mjekësor në dispozicion</small><b>'+(20-hm)+'<span> / 20</span></b></div><div class="mini"><small>Të tjera</small><b>'+sp+'<span> ditë</span></b></div></div>';
   h+='<div class="card"><h2>Raporto pushim</h2>'+menuHtml()+'<div class="row" style="margin-top:12px"><div><label for="from">Prej</label><input type="date" id="from" oninput="calc()"></div><div><label for="to">Deri</label><input type="date" id="to" oninput="calc()"></div><div><label for="days">Ditë</label><input type="number" id="days" min="1" max="20" oninput="calc(1)"></div></div><label for="note">Shënim (opsionale)</label><textarea id="note" rows="2"></textarea><div id="docbox" style="display:none"><div class="warn">'+I.warn+'<span><b>Mbi 3 ditë:</b> ngarkoni dëshminë e mjekut (PDF ose foto).</span></div><label for="file">Dëshmia e mjekut</label><input type="file" id="file" accept="application/pdf,image/*"></div><p class="mut" id="left" style="font-size:13px;margin-top:12px"></p><p class="err" id="err"></p><button class="btn p full" style="margin-top:4px" id="go" onclick="send()">Dërgo</button></div>';
   h+='<div class="card"><h2>Historiku</h2>'+(myAbs.length?myAbs.map(e=>entry(e,false)).join(""):'<p class="mut">Nuk ka pushime të regjistruara.</p>')+'</div>';
   h+='<div class="card"><h2>Gjendja e pushimeve '+Y+'</h2><div class="scroll"><table><tr><th>Lloji i pushimit</th><th>Të lejuara</th><th>Të shfrytëzuara</th><th>Në dispozicion</th></tr>'+Object.keys(T).map(k=>{const a=T[k][1],u=used(myAbs,k),hh=held(myAbs,k);return '<tr><td class="wrapc">'+esc(T[k][0])+'</td><td>'+(a||"—")+'</td><td>'+u+(hh>u?' <span class="mut">(+'+(hh-u)+' në pritje)</span>':'')+'</td><td><b>'+(a?a-hh:"—")+'</b></td></tr>'}).join("")+'</table></div></div>';
