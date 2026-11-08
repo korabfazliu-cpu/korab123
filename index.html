@@ -182,8 +182,9 @@ const fmt=d=>d.split("-").reverse().join(".");
 const span=(a,b)=>Math.round((new Date(b)-new Date(a))/864e5)+1;
 const st=e=>e.status||"approved";
 const sumY=(es,k,f)=>(es||[]).filter(e=>e.from_date.slice(0,4)==Y&&e.leave_type==k&&f(st(e))).reduce((s,e)=>s+e.days,0);
-const used=(es,k)=>sumY(es,k,s=>s=="approved");
-const held=(es,k)=>sumY(es,k,s=>s!="rejected");
+const opn=(uid,k)=>{if(!uid)return 0;const p=sched.people.find(x=>x.user_id==uid);return p?opening.filter(o=>o.person_id==p.id&&o.leave_type==k&&o.year==Y).reduce((s,o)=>s+o.used_days,0):0};
+const used=(es,k,uid)=>sumY(es,k,s=>s=="approved")+opn(uid,k);
+const held=(es,k,uid)=>sumY(es,k,s=>s!="rejected")+opn(uid,k);
 const STB={pending:'<span class="badge w">Në pritje</span>',approved:'<span class="badge o">Miratuar</span>',rejected:'<span class="badge r">Refuzuar</span>'};
 const T={vjetor:["Pushimi vjetor",20],mjekesor:["Pushimi mjekësor",20],martese:["Pushimi në rast martese",5],vdekje:["Pushimi në rast vdekjeje të anëtarit të ngushtë të familjes",5],lindje:["Pushim për lindje të fëmijës",3],gjak:["Pushim për dhënie vullnetare të gjakut",2],papagese:["Pushim pa pagesë",0],bartur:["Pushim i bartur nga viti paraprak",0],kompenzim:["Pushim me kompenzim",0],extra:["Punë extra",0]};
 const SPECIAL=["martese","vdekje","lindje","gjak"],OTHER=["papagese","bartur","kompenzim"],HIDDEN=["bartur","kompenzim"];
@@ -207,7 +208,7 @@ const logoBlock=h=>'<span class="logo"><img src="'+LOGO+'" alt="038 Parking Cent
 const FOOT='<p class="foot">© 038 Parking Center · Prishtinë</p>';
 const CIRC=n=>Array.from({length:n},(_,i)=>'<span class="circ c'+(i+1)+'" aria-hidden="true"></span>').join("");
 const authPage=(card,below)=>'<div class="ap">'+CIRC(3)+'<div class="apin">'+logoBlock(56)+'<h1 style="margin-top:34px">Digital HR</h1><div class="card">'+card+'</div>'+(below||'')+'<p class="foot">© 038 Parking Center · Prishtinë</p></div></div>';
-let ltype="",menu=false,sub=null,session=null,me=null,mode="in",tab="me",myAbs=[],profs=[],allAbs=[],armed=null,msg="",q="",flash="",recovering=false,editing=null,sched={people:[],entries:[]},smonth=today().slice(0,7),sedit=null,imp=null,showSec=false;
+let ltype="",menu=false,sub=null,session=null,me=null,mode="in",tab="me",myAbs=[],profs=[],allAbs=[],armed=null,msg="",q="",flash="",recovering=false,editing=null,opening=[],limp=null,sched={people:[],entries:[]},smonth=today().slice(0,7),sedit=null,imp=null,showSec=false;
 
 sb.auth.onAuthStateChange((ev,s)=>{
   if(ev=="TOKEN_REFRESHED")return;
@@ -315,7 +316,8 @@ function menuHtml(){
 }
 function pick(k){ltype=k;menu=false;sub=null;flash="";draw()}
 function meView(){
-  const va=used(myAbs,"vjetor"),ha=held(myAbs,"vjetor"),hm=held(myAbs,"mjekesor"),sp=SPECIAL.concat(OTHER).reduce((n,k)=>n+used(myAbs,k),0),ex=used(myAbs,"extra"),hx=held(myAbs,"extra");
+  const U=session.user.id;
+  const va=used(myAbs,"vjetor",U),ha=held(myAbs,"vjetor",U),hm=held(myAbs,"mjekesor",U),sp=SPECIAL.concat(OTHER).reduce((n,k)=>n+used(myAbs,k,U),0),ex=used(myAbs,"extra",U),hx=held(myAbs,"extra",U);
   const fr=Math.max(0,Math.min(100,(20-ha)/20*100));
   let h='<div class="card big"><div class="ring" role="img" aria-label="'+(20-ha)+' nga 20 ditë në dispozicion" style="background:conic-gradient(var(--blue) 0 '+fr+'%,var(--tint) '+fr+'% 100%)"><div><b>'+(20-ha)+'</b><span>nga 20</span></div></div><div><h2>Pushimi vjetor</h2><p>'+(20-ha)+' ditë në dispozicion<br>'+va+' të shfrytëzuara'+(ha>va?' · '+(ha-va)+' në pritje':'')+'</p></div></div>';
   if(flash)h+='<div class="info" style="margin-top:0">'+I.info+'<span>'+esc(flash)+'</span></div>';
@@ -323,7 +325,7 @@ function meView(){
   h+=mySchedCard();
   h+='<div class="card"><h2>Raporto pushim ose punë extra</h2>'+menuHtml()+'<div class="row" style="margin-top:12px"><div><label for="from">Prej</label><input type="date" id="from" oninput="calc()"></div><div><label for="to">Deri</label><input type="date" id="to" oninput="calc()"></div><div><label for="days">Ditë</label><input type="number" id="days" min="1" max="20" oninput="calc(1)"></div></div><div id="shbox" style="display:none"><label for="shift">Orari i punës extra</label><input id="shift" list="shl2" placeholder="p.sh. 08-16"><datalist id="shl2">'+["07-15","08-16","09-17","10-18","15-23","16-00","23-07"].map(o=>'<option value="'+o+'">').join("")+'</datalist></div><label for="note">Shënim (opsionale)</label><textarea id="note" rows="2"></textarea><div id="docbox" style="display:none"><div class="warn">'+I.warn+'<span><b>Mbi 3 ditë:</b> ngarkoni dëshminë e mjekut (PDF ose foto).</span></div><label for="file">Dëshmia e mjekut</label><input type="file" id="file" accept="application/pdf,image/*"></div><p class="mut" id="left" style="font-size:13px;margin-top:12px"></p><p class="err" id="err"></p><button class="btn p full" style="margin-top:4px" id="go" onclick="send()">Dërgo</button></div>';
   h+='<div class="card"><h2>Historiku</h2>'+(myAbs.length?myAbs.map(e=>entry(e,false)).join(""):'<p class="mut">Nuk ka pushime të regjistruara.</p>')+'</div>';
-  h+='<div class="card"><h2>Gjendja e pushimeve '+Y+'</h2><div class="scroll"><table><tr><th>Lloji i pushimit</th><th>Të lejuara</th><th>Të shfrytëzuara</th><th>Në dispozicion</th></tr>'+Object.keys(T).filter(k=>!HIDDEN.includes(k)||held(myAbs,k)>0).map(k=>{const a=T[k][1],u=used(myAbs,k),hh=held(myAbs,k);return '<tr><td class="wrapc">'+esc(T[k][0])+'</td><td>'+(a||"—")+'</td><td>'+u+(hh>u?' <span class="mut">(+'+(hh-u)+' në pritje)</span>':'')+'</td><td><b>'+(a?a-hh:"—")+'</b></td></tr>'}).join("")+'</table></div></div>';
+  h+='<div class="card"><h2>Gjendja e pushimeve '+Y+'</h2><div class="scroll"><table><tr><th>Lloji i pushimit</th><th>Të lejuara</th><th>Të shfrytëzuara</th><th>Në dispozicion</th></tr>'+Object.keys(T).filter(k=>!HIDDEN.includes(k)||held(myAbs,k,session.user.id)>0).map(k=>{const a=T[k][1],u=used(myAbs,k,session.user.id),hh=held(myAbs,k,session.user.id);return '<tr><td class="wrapc">'+esc(T[k][0])+'</td><td>'+(a||"—")+'</td><td>'+u+(hh>u?' <span class="mut">(+'+(hh-u)+' në pritje)</span>':'')+'</td><td><b>'+(a?a-hh:"—")+'</b></td></tr>'}).join("")+'</table></div></div>';
   return h;
 }
 const MON=["Janar","Shkurt","Mars","Prill","Maj","Qershor","Korrik","Gusht","Shtator","Tetor","Nëntor","Dhjetor"],WD=["Die","Hën","Mar","Mër","Enj","Pre","Sht"];
@@ -334,11 +336,13 @@ const wd=s=>WD[new Date(s+"T12:00:00").getDay()];
 const mLabel=ym=>MON[+ym.slice(5)-1]+" "+ym.slice(0,4);
 const sCls=v=>{const t=String(v||"").toLowerCase().trim();if(!t)return"se";if(t.includes("vjetor")||t.includes("mjek"))return"sl";if(t.startsWith("pushim"))return"so";const m=t.match(/^(\d{1,2})\s*[-–:]/);if(!m)return"sx";const h=+m[1];return h>=5&&h<12?"sm":h>=12&&h<20?"sa":"sn"};
 const sTxt=v=>{const c=sCls(v);return c=="sl"?(String(v).toLowerCase().includes("mjek")?"Mjekësor":"Vjetor"):v};
+const findP=n=>{const l=String(n).trim().toLowerCase();return sched.people.find(p=>p.name.toLowerCase()==l||(p.aliases||[]).some(a=>a.toLowerCase()==l))};
 const pName=id=>(sched.people.find(x=>x.id==id)||{}).name||"";
 async function loadSched(){
   const days=mDays(smonth),t=today(),t7=addD(t,7),lo=days[0]<t?days[0]:t,hi=days[days.length-1]>t7?days[days.length-1]:t7;
   try{const [p,e]=await Promise.all([sb.from("schedule_people").select("*").order("name"),sb.from("schedule_entries").select("*").gte("day",lo).lte("day",hi)]);
   sched={people:p.data||[],entries:e.data||[]}}catch(err){sched={people:[],entries:[]}}
+  try{const o=await sb.from("leave_opening").select("*").eq("year",Y);opening=o.data||[]}catch(err){opening=[]}
 }
 async function shiftMonth(n){const [y,m]=smonth.split("-").map(Number),d=new Date(y,m-1+n,1);smonth=d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0");sedit=null;await loadSched();draw()}
 function schedGrid(admin){
@@ -419,26 +423,73 @@ async function xlsPick(inp){
 }
 function impCard(){
   if(imp.error)return '<div class="card"><h2>Importi i Excel-it</h2><p class="err">'+esc(imp.error)+'</p><button class="btn" onclick="imp=null;draw()">Mbyll</button></div>';
-  const un=[...new Set(imp.extras.filter(e=>!e.name).map(e=>e.label))],known=new Set(sched.people.map(p=>p.name.toLowerCase())),nw=imp.names.filter(n=>!known.has(n.toLowerCase()));
+  const un=[...new Set(imp.extras.filter(e=>!e.name).map(e=>e.label))],nw=imp.names.filter(n=>!findP(n));
   return '<div class="card" style="outline:2px solid var(--blue)"><h2>Kontrolloni importin · '+esc(imp.file)+'</h2><p style="font-size:14px">Periudha: <b>'+fmt(imp.from)+' – '+fmt(imp.to)+'</b> · <b>'+imp.names.length+'</b> persona · <b>'+imp.entries.length+'</b> ndërrime · <b>'+imp.extras.length+'</b> ndërrime extra</p>'+(nw.length?'<p class="mut" style="font-size:13px;margin-top:6px">Emra të rinj në orar: '+esc(nw.join(", "))+'</p>':'')+(un.length?'<p class="mut" style="font-size:13px;margin-top:6px">Extra me emra që nuk janë në listë (do të shfaqen ashtu siç janë shkruar): '+esc(un.join(", "))+'</p>':'')+'<div class="warn">'+I.warn+'<span>Orari ekzistues për këtë periudhë do të zëvendësohet me këtë Excel.</span></div><p class="err" id="ierr"></p><div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn p" id="igo" onclick="doImport()">Konfirmo importin</button><button class="btn" onclick="imp=null;draw()">Anulo</button></div></div>';
 }
 async function doImport(){
   const er=$("#ierr"),b=$("#igo");b.disabled=true;er.textContent="";
   try{
-    const up=await sb.from("schedule_people").upsert(imp.names.map(n=>({name:n})),{onConflict:"name",ignoreDuplicates:true});if(up.error)throw up.error;
-    const pr=await sb.from("schedule_people").select("*");if(pr.error)throw pr.error;
-    const id=Object.fromEntries(pr.data.map(p=>[p.name,p.id]));
+    const nw=imp.names.filter(n=>!findP(n));
+    if(nw.length){const up=await sb.from("schedule_people").insert(nw.map(n=>({name:n})));if(up.error)throw up.error}
+    await loadSched();
+    const id=Object.fromEntries(imp.names.map(n=>[n,(findP(n)||{}).id]));
     const del=await sb.from("schedule_entries").delete().gte("day",imp.from).lte("day",imp.to);if(del.error)throw del.error;
     const rows=imp.entries.map(e=>({day:e.day,dept:e.dept,person_id:id[e.name],value:e.value})).concat(imp.extras.map(e=>({day:e.day,dept:e.dept,person_id:e.name?id[e.name]:null,person_label:e.label,value:e.value,is_extra:true})));
     for(let i=0;i<rows.length;i+=500){const r=await sb.from("schedule_entries").insert(rows.slice(i,i+500));if(r.error)throw r.error}
     imp=null;await loadSched();draw();
   }catch(e){b.disabled=false;er.textContent="Importi dështoi: "+(e.message||e)}
 }
+const LKEYS=[["vjetor","vjetor"],["mjek","mjekesor"],["martes","martese"],["vdekj","vdekje"],["lindj","lindje"],["gjak","gjak"],["pa pages","papagese"],["extra","extra"],["bartur","bartur"],["kompenz","kompenzim"]];
+const lkey=s=>{s=String(s||"").toLowerCase();const m=LKEYS.find(x=>s.includes(x[0]));return m?m[1]:null};
+function parseLeave(wb){
+  return wb.SheetNames.map(sn=>{
+    const g=XLSX.utils.sheet_to_json(wb.Sheets[sn],{header:1,raw:true,defval:null});let name=null,pos=null,hr=-1,tc=-1,uc=-1;
+    g.forEach((r,i)=>(r||[]).forEach((v,j)=>{if(typeof v!="string")return;const l=v.toLowerCase();
+      if(l.includes("emri dhe mbiemri"))name=v.split(":").slice(1).join(":").trim().replace(/\s+/g," ");
+      else if(l.startsWith("pozita"))pos=v.split(":").slice(1).join(":").trim();
+      else if(l.includes("lloji")&&hr<0){hr=i;tc=j}
+      else if(l.includes("shfryt")&&!l.includes("pa "))uc=j}));
+    if(!name||hr<0||uc<0)return {sheet:sn,error:true};
+    const used={};g.slice(hr+1).forEach(r=>{r=r||[];const k=lkey(r[tc]),v=r[uc];if(k&&typeof v=="number")used[k]=Math.max(0,Math.round(v))});
+    return {sheet:sn,name,position:pos,used};
+  });
+}
+async function leavePick(inp){
+  const f=inp.files[0];inp.value="";if(!f)return;
+  try{await loadXLSX();const buf=await f.arrayBuffer();const rows=parseLeave(XLSX.read(buf,{type:"array"}));limp={file:f.name,rows:rows.filter(x=>!x.error),bad:rows.filter(x=>x.error).map(x=>x.sheet)};if(!limp.rows.length)limp={error:"Nuk u gjet asnjë fletë me \"Emri dhe Mbiemri\" dhe \"Ditë të shfrytëzuara\"."}}
+  catch(e){limp={error:e.message||String(e)}}
+  draw();
+}
+function leaveCard(){
+  let h='<div class="card"><div class="hd"><h2>Gjendja e pushimeve nga Excel · '+Y+'</h2><label class="btn ol" style="margin:0;cursor:pointer">Ngarko gjendjen e pushimeve<input type="file" accept=".xlsx,.xls" style="display:none" onchange="leavePick(this)"></label></div><p class="mut" style="font-size:13px;margin:-4px 0 10px">Ditët e shfrytëzuara nga Excel-i (një fletë për çdo punonjës) ruhen si pikënisje për '+Y+'. Aplikacioni u shton pushimet e miratuara këtu dhe limitet i llogarit bashkë.</p>';
+  if(limp&&limp.error)h+='<p class="err">'+esc(limp.error)+'</p><button class="btn sm" onclick="limp=null;draw()">Mbyll</button>';
+  else if(limp){const nw=limp.rows.filter(x=>!findP(x.name)).map(x=>x.name);
+    h+='<div class="info" style="margin:0 0 10px"><span><b>'+esc(limp.file)+'</b>: '+limp.rows.length+' punonjës'+(nw.length?' · të rinj në listë: '+esc(nw.join(", ")):'')+(limp.bad.length?' · fletë të palexueshme: '+esc(limp.bad.join(", ")):'')+'</span></div><div class="scroll"><table><tr><th>Emri</th><th>Vjetor</th><th>Mjekësor</th><th>Të tjera</th><th>Extra</th></tr>'+limp.rows.map(x=>{const u=x.used,o=["martese","vdekje","lindje","gjak","papagese"].reduce((n,k)=>n+(u[k]||0),0);return '<tr><td>'+esc(x.name)+(findP(x.name)?'':' <span class="badge t">i ri</span>')+'</td><td>'+(u.vjetor||0)+'/20</td><td>'+(u.mjekesor||0)+'/20</td><td>'+o+'</td><td>'+(u.extra||0)+'</td></tr>'}).join("")+'</table></div><div class="warn">'+I.warn+'<span>Vlerat për '+Y+' të këtyre punonjësve do të zëvendësohen me ato të Excel-it.</span></div><p class="err" id="lerr"></p><div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn p" id="lgo" onclick="doLeaveImport()">Konfirmo importin</button><button class="btn" onclick="limp=null;draw()">Anulo</button></div>'}
+  else if(sched.people.length){
+    const rows=sched.people.map(p=>{const o=k=>opening.filter(x=>x.person_id==p.id&&x.leave_type==k).reduce((s,x)=>s+x.used_days,0),a=k=>p.user_id?sumY(allAbs.filter(z=>z.user_id==p.user_id),k,s=>s=="approved"):0,t=k=>o(k)+a(k),oth=["martese","vdekje","lindje","gjak","papagese"].reduce((n,k)=>n+t(k),0),acc=profs.find(x=>x.id==p.user_id);
+      return '<tr><td><b>'+esc(p.name)+'</b>'+(p.position?'<div class="mut" style="font-size:12px">'+esc(p.position)+'</div>':'')+'</td><td>'+t("vjetor")+'/20</td><td>'+t("mjekesor")+'/20</td><td>'+oth+'</td><td>'+t("extra")+'</td><td>'+(acc?esc(acc.full_name):'<span class="badge w">Pa lidhje</span>')+'</td></tr>'}).join("");
+    h+='<div class="scroll"><table><tr><th>Emri</th><th>Vjetor</th><th>Mjekësor</th><th>Të tjera</th><th>Extra</th><th>Llogaria</th></tr>'+rows+'</table></div><p class="mut" style="font-size:12px;margin-top:8px">Ditët = Excel + pushimet e miratuara në aplikacion (pas lidhjes me llogarinë).</p>'}
+  return h+'</div>';
+}
+async function doLeaveImport(){
+  const er=$("#lerr"),b=$("#lgo");b.disabled=true;er.textContent="";
+  try{
+    for(const x of limp.rows){const p=findP(x.name);
+      if(!p){const r=await sb.from("schedule_people").insert({name:x.name,position:x.position});if(r.error)throw r.error}
+      else if(x.position&&x.position!==p.position){const r=await sb.from("schedule_people").update({position:x.position}).eq("id",p.id);if(r.error)throw r.error}}
+    await loadSched();
+    const ids=limp.rows.map(x=>findP(x.name).id);
+    const del=await sb.from("leave_opening").delete().eq("year",Y).in("person_id",ids);if(del.error)throw del.error;
+    const rows=limp.rows.flatMap(x=>Object.entries(x.used).map(([k,v])=>({person_id:findP(x.name).id,year:Y,leave_type:k,used_days:v})));
+    const ins=await sb.from("leave_opening").insert(rows);if(ins.error)throw ins.error;
+    limp=null;await loadSched();draw();
+  }catch(e){b.disabled=false;er.textContent="Importi dështoi: "+(e.message||e)}
+}
 function reqView(){
   const p=profs.filter(x=>x.status=="pending"),la=allAbs.filter(a=>st(a)=="pending");
   const nm=id=>profs.find(x=>x.id==id)||{};
   let h='<div class="card"><div class="hd"><h2>Kërkesa për pushim</h2>'+(la.length?'<span class="badge t">'+la.length+' në pritje</span>':'')+'</div>';
-  h+=la.length?la.map(e=>{const s=nm(e.user_id),med=e.leave_type=="mjekesor";return '<div class="req"><div style="display:flex;gap:12px;align-items:center;min-width:0"><span class="av">'+esc(ini(s.full_name))+'</span><div style="min-width:0"><b>'+esc(s.full_name||"—")+'</b> <span class="mut" style="font-size:13px">· '+esc(s.position||"")+'</span><div style="font-size:14px">'+esc(T[e.leave_type][0])+(e.shift?' · <b>'+esc(e.shift)+'</b>':'')+'</div><div class="mut" style="font-size:13px">'+fmt(e.from_date)+' – '+fmt(e.to_date)+' · <b style="color:var(--tx)">'+e.days+' ditë</b>'+(T[e.leave_type][1]?' · të miratuara këtë vit: '+used(allAbs.filter(a=>a.user_id==e.user_id),e.leave_type)+'/'+T[e.leave_type][1]:'')+'</div>'+(e.note?'<div class="mut" style="font-size:13px">“'+esc(e.note)+'”</div>':'')+(e.doc_path?(true?'<button type="button" class="lnk" style="border:0;background:none;padding:0;font-size:13px" onclick="openDoc(\''+esc(e.doc_path)+'\')">Shiko dëshminë</button>':''):'')+'</div></div><div style="display:flex;gap:8px"><button class="btn p" onclick="setLeave(\''+e.id+'\',\'approved\')">Mirato</button><button class="btn" onclick="setLeave(\''+e.id+'\',\'rejected\')">Refuzo</button><button class="btn ol" onclick="editLeave(\''+e.id+'\')">Ndrysho / Koment</button></div>'+(editing==e.id?editForm(e):'')+'</div>'}).join(""):'<p class="mut">Asnjë kërkesë për pushim në pritje.</p>';
+  h+=la.length?la.map(e=>{const s=nm(e.user_id),med=e.leave_type=="mjekesor";return '<div class="req"><div style="display:flex;gap:12px;align-items:center;min-width:0"><span class="av">'+esc(ini(s.full_name))+'</span><div style="min-width:0"><b>'+esc(s.full_name||"—")+'</b> <span class="mut" style="font-size:13px">· '+esc(s.position||"")+'</span><div style="font-size:14px">'+esc(T[e.leave_type][0])+(e.shift?' · <b>'+esc(e.shift)+'</b>':'')+'</div><div class="mut" style="font-size:13px">'+fmt(e.from_date)+' – '+fmt(e.to_date)+' · <b style="color:var(--tx)">'+e.days+' ditë</b>'+(T[e.leave_type][1]?' · të miratuara këtë vit: '+used(allAbs.filter(a=>a.user_id==e.user_id),e.leave_type,e.user_id)+'/'+T[e.leave_type][1]:'')+'</div>'+(e.note?'<div class="mut" style="font-size:13px">“'+esc(e.note)+'”</div>':'')+(e.doc_path?(true?'<button type="button" class="lnk" style="border:0;background:none;padding:0;font-size:13px" onclick="openDoc(\''+esc(e.doc_path)+'\')">Shiko dëshminë</button>':''):'')+'</div></div><div style="display:flex;gap:8px"><button class="btn p" onclick="setLeave(\''+e.id+'\',\'approved\')">Mirato</button><button class="btn" onclick="setLeave(\''+e.id+'\',\'rejected\')">Refuzo</button><button class="btn ol" onclick="editLeave(\''+e.id+'\')">Ndrysho / Koment</button></div>'+(editing==e.id?editForm(e):'')+'</div>'}).join(""):'<p class="mut">Asnjë kërkesë për pushim në pritje.</p>';
   h+='</div><div class="card"><div class="hd"><h2>Kërkesa për llogari</h2>'+(p.length?'<span class="badge t">'+p.length+' në pritje</span>':'')+'</div>';
   h+=p.length?p.map(x=>'<div class="req"><div style="display:flex;gap:12px;align-items:center"><span class="av">'+esc(ini(x.full_name))+'</span><div><b>'+esc(x.full_name)+'</b><div class="mut" style="font-size:13px">'+esc(x.position)+' · '+new Date(x.created_at).toLocaleDateString("sq")+'</div></div></div><div style="display:flex;gap:8px"><button class="btn p" onclick="setStatus(\''+x.id+'\',\'approved\')">Mirato</button><button class="btn" onclick="setStatus(\''+x.id+'\',\'rejected\')">Refuzo</button></div></div>').join(""):'<p class="mut">Asnjë kërkesë për llogari në pritje.</p>';
   return h+'</div>';
@@ -453,8 +504,9 @@ function staffView(){
   const by=id=>allAbs.filter(a=>a.user_id==id);
   const ql=q.trim().toLowerCase(),list=ap.filter(s=>!ql||(s.full_name+" "+s.position).toLowerCase().includes(ql));
   const pm=u=>'<div class="pm"><i><em style="width:'+Math.min(100,u/20*100)+'%"></em></i>'+u+'/20</div>';
-  const rows=list.map(s=>{const e=by(s.id);const oth=Object.keys(T).filter(k=>k!="vjetor"&&k!="mjekesor"&&k!="extra").reduce((n,k)=>n+used(e,k),0);return '<tr><td><div style="display:flex;align-items:center;gap:10px"><span class="av">'+esc(ini(s.full_name))+'</span><b>'+esc(s.full_name)+'</b></div></td><td class="mut">'+esc(s.position)+'</td><td>'+pm(used(e,"vjetor"))+'</td><td>'+pm(used(e,"mjekesor"))+'</td><td>'+oth+'</td><td>'+used(e,"extra")+'</td></tr>'}).join("");
+  const rows=list.map(s=>{const e=by(s.id);const oth=Object.keys(T).filter(k=>k!="vjetor"&&k!="mjekesor"&&k!="extra").reduce((n,k)=>n+used(e,k,s.id),0);return '<tr><td><div style="display:flex;align-items:center;gap:10px"><span class="av">'+esc(ini(s.full_name))+'</span><b>'+esc(s.full_name)+'</b></div></td><td class="mut">'+esc(s.position)+'</td><td>'+pm(used(e,"vjetor",s.id))+'</td><td>'+pm(used(e,"mjekesor",s.id))+'</td><td>'+oth+'</td><td>'+used(e,"extra",s.id)+'</td></tr>'}).join("");
   h+='<div class="card"><div class="hd"><h2>Përmbledhje</h2><div style="display:flex;gap:8px;flex-wrap:wrap"><label class="sr" for="q">Kërko punonjës</label><input id="q" type="search" placeholder="Kërko punonjës" value="'+esc(q)+'" oninput="search(this.value)" style="height:44px;width:220px"><button class="btn ol" onclick="csv()">'+I.dl+'Eksporto CSV</button></div></div><div class="scroll"><table><tr><th>Emri</th><th>Pozita</th><th>Vjetor</th><th>Mjekësor</th><th>Të tjera</th><th>Punë extra</th></tr>'+(rows||'<tr><td colspan="6" class="mut">Asnjë rezultat.</td></tr>')+'</table></div></div>';
+  h+=leaveCard()+linkCard();
   h+=list.map(s=>'<div class="card"><div class="hd"><div style="display:flex;align-items:center;gap:10px"><span class="av">'+esc(ini(s.full_name))+'</span><div><h2 style="margin:0">'+esc(s.full_name)+'</h2><div class="mut" style="font-size:13px">'+esc(s.position)+'</div></div></div></div>'+(by(s.id).length?by(s.id).map(e=>entry(e,true)).join(""):'<span class="mut">Pa pushime.</span>')+'</div>').join("");
   return h;
 }
@@ -466,13 +518,13 @@ function calc(manual){
   $("#docbox").style.display=(ltype=="mjekesor"&&d>3)?"block":"none";
   $("#shbox").style.display=ltype=="extra"?"block":"none";
   const a=ltype&&T[ltype][1];
-  $("#left").innerHTML=ltype=="extra"?'Puna extra shtohet në orarin tuaj pasi ta miratojë administratori.':a?'Ju mbeten <b style="color:var(--tx)">'+(a-held(myAbs,ltype))+' ditë</b> për këtë lloj pushimi në '+Y+'.':'';
+  $("#left").innerHTML=ltype=="extra"?'Puna extra shtohet në orarin tuaj pasi ta miratojë administratori.':a?'Ju mbeten <b style="color:var(--tx)">'+(a-held(myAbs,ltype,session.user.id))+' ditë</b> për këtë lloj pushimi në '+Y+'.':'';
 }
 async function send(){
   const f=$("#from").value,t=$("#to").value,d=+$("#days").value,note=$("#note").value.trim(),file=$("#file")&&$("#file").files[0],er=$("#err");
   er.textContent="";
   if(!ltype){er.textContent="Zgjidhni llojin e pushimit.";return}
-  const a=T[ltype][1],left=a?a-held(myAbs,ltype):1e9,med=ltype=="mjekesor"&&d>3,shift=$("#shift").value.trim();
+  const a=T[ltype][1],left=a?a-held(myAbs,ltype,session.user.id):1e9,med=ltype=="mjekesor"&&d>3,shift=$("#shift").value.trim();
   if(ltype=="extra"&&!/^\d{1,2}(:\d{2})?\s*-\s*\d{1,2}(:\d{2})?$/.test(shift)){er.textContent="Shkruani orarin e punës extra, p.sh. 08-16.";return}
   if(!f||!t||t<f||!(d>0)){er.textContent="Zgjidhni datat e sakta.";return}
   if(d>span(f,t)){er.textContent="Ditët nuk mund të jenë më shumë se periudha e zgjedhur.";return}
