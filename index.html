@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="sq">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Pushimet Mjekësore</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🩺</text></svg>">
+<style>
+:root{--bg:#f5f7f9;--card:#fff;--tx:#18212b;--mut:#637080;--bd:#dfe4ea;--ac:#0f766e;--acx:#fff;--wbg:#fef3c7;--wtx:#92400e;--obg:#dcfce7;--otx:#166534;--bad:#b91c1c}
+@media (prefers-color-scheme:dark){:root{color-scheme:dark;--bg:#12171d;--card:#1b222b;--tx:#e8edf2;--mut:#93a1b1;--bd:#2c3642;--ac:#2dd4bf;--acx:#06201d;--wbg:#3b2f0b;--wtx:#fcd34d;--obg:#0f2e1b;--otx:#86efac;--bad:#f87171}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--tx);font:15px/1.5 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+main{max-width:860px;margin:0 auto;padding:18px 14px 40px}
+h1{font-size:20px;margin:0 0 2px}h2{font-size:16px;margin:0 0 10px}
+.sub{color:var(--mut);margin:0 0 14px}
+.card{background:var(--card);border:1px solid var(--bd);border-radius:12px;padding:14px;margin-bottom:14px}
+.top{display:flex;justify-content:space-between;align-items:flex-start;gap:8px}
+.tabs{display:flex;gap:6px;margin-bottom:14px;flex-wrap:wrap}.tabs button{flex:1}
+button{font:inherit;border:1px solid var(--bd);background:var(--card);color:var(--tx);border-radius:8px;padding:8px 12px;cursor:pointer}
+button.p{background:var(--ac);color:var(--acx);border-color:var(--ac);font-weight:600}
+button.on{border-color:var(--ac);color:var(--ac);font-weight:600}
+button:disabled{opacity:.5}
+.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;text-align:center;margin-top:10px}
+.stats b{display:block;font-size:24px}.stats span{color:var(--mut);font-size:12px}
+.bar{height:8px;background:var(--bd);border-radius:6px;overflow:hidden;margin-top:10px}.bar i{display:block;height:100%;background:var(--ac)}
+label{display:block;font-size:13px;color:var(--mut);margin:8px 0 3px}
+input,textarea{width:100%;font:inherit;padding:8px;border:1px solid var(--bd);border-radius:8px;background:var(--bg);color:var(--tx)}
+.row{display:grid;grid-template-columns:1fr 1fr 90px;gap:8px}
+.badge{display:inline-block;padding:1px 8px;border-radius:10px;font-size:12px}
+.w{background:var(--wbg);color:var(--wtx)}.o{background:var(--obg);color:var(--otx)}
+.warn{background:var(--wbg);color:var(--wtx);padding:8px 10px;border-radius:8px;margin-top:8px;font-size:13px}
+.err{color:var(--bad);min-height:20px;margin-top:6px;font-size:13px}
+.ent{display:flex;justify-content:space-between;gap:8px;align-items:center;padding:8px 0;border-top:1px solid var(--bd)}
+.ent:first-of-type{border-top:0}
+.scroll{overflow-x:auto}
+table{width:100%;border-collapse:collapse;font-size:14px}th,td{text-align:left;padding:7px 6px;border-bottom:1px solid var(--bd);white-space:nowrap}
+a,.lnk{color:var(--ac);cursor:pointer}.mut{color:var(--mut)}
+.auth{max-width:400px;margin:40px auto 0}
+td:first-child{white-space:normal}
+.sel{width:100%;text-align:left}
+.menu{border:1px solid var(--bd);border-radius:8px;margin-top:6px;overflow:hidden;background:var(--bg)}
+.mi{padding:10px 12px;cursor:pointer;border-top:1px solid var(--bd);display:flex;justify-content:space-between}
+.mi:first-child{border-top:0}
+.mi:hover{background:var(--card)}
+.si{padding-left:28px;font-size:14px}
+</style>
+</head>
+<body>
+<main id="app"><p class="mut">Duke u ngarkuar…</p></main>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
+<script>
+const SB_URL="https://ijfmfeodnzkltxregfko.supabase.co",SB_KEY="sb_publishable_-8cp1lylwsjbRJb4KU7S5g_gK5z4W7e";
+const sb=supabase.createClient(SB_URL,SB_KEY);
+const Y=new Date().getFullYear(),Q=20;
+const $=s=>document.querySelector(s);
+const esc=s=>String(s==null?"":s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const fmt=d=>d.split("-").reverse().join(".");
+const span=(a,b)=>Math.round((new Date(b)-new Date(a))/864e5)+1;
+const used=(es,k)=>(es||[]).filter(e=>e.from_date.slice(0,4)==Y&&e.leave_type==k).reduce((s,e)=>s+e.days,0);
+const T={vjetor:["Pushimi vjetor",20],mjekesor:["Pushimi mjekësor",20],martese:["Pushimi në rast martese",5],vdekje:["Pushimi në rast vdekjeje të anëtarit të ngushtë të familjes",5],lindje:["Pushim për lindje të fëmijës",3],gjak:["Pushim për dhënie vullnetare të gjakut",2],papagese:["Pushim pa pagesë",0],bartur:["Pushim i bartur nga viti paraprak",0],kompenzim:["Pushim me kompenzim",0]};
+const MENU=[{k:"vjetor"},{k:"mjekesor"},{l:"Raste të veçanta",i:["martese","vdekje","lindje","gjak"]},{l:"Të tjera",i:["papagese","bartur","kompenzim"]}];
+let ltype="",menu=false,sub=null,session=null,me=null,mode="in",tab="me",myAbs=[],profs=[],allAbs=[],armed=null,msg="";
+
+sb.auth.onAuthStateChange((ev,s)=>{
+  if(ev=="TOKEN_REFRESHED")return;
+  session=s;setTimeout(load,0);
+});
+
+async function load(){
+  if(!session){me=null;return draw()}
+  const uid=session.user.id;
+  let r=await sb.from("profiles").select("*").eq("id",uid).maybeSingle();
+  me=r.data;
+  if(me&&me.status=="approved"){
+    const a=await sb.from("absences").select("*").eq("user_id",uid).order("from_date",{ascending:false});
+    myAbs=a.data||[];
+    if(me.role=="admin"){
+      const [p,b]=await Promise.all([sb.from("profiles").select("*").order("full_name"),sb.from("absences").select("*").order("from_date",{ascending:false})]);
+      profs=p.data||[];allAbs=b.data||[];
+      if(tab=="me"&&!window.__adminSeen){tab=profs.some(x=>x.status=="pending")?"req":"staff";window.__adminSeen=1}
+    }
+  }
+  draw();
+}
+
+function draw(){
+  const keep={f:$("#from")&&$("#from").value,t:$("#to")&&$("#to").value,n:$("#note")&&$("#note").value};
+  const app=$("#app");
+  if(!session)return app.innerHTML=authView();
+  if(!me)return app.innerHTML='<div class="card auth"><p>Duke ngarkuar profilin…</p><button onclick="out()">Dil</button></div>';
+  if(me.status!="approved"){
+    return app.innerHTML='<div class="card auth"><h2>'+(me.status=="pending"?"Llogaria pret miratimin":"Llogaria u refuzua")+'</h2><p class="mut">'+(me.status=="pending"?"Administratori duhet ta miratojë llogarinë tuaj para se të hyni. Kthehuni më vonë.":"Administratori nuk e miratoi këtë llogari. Kontaktoni menaxherin.")+'</p><button onclick="load()">Rifresko</button> <button onclick="out()">Dil</button></div>';
+  }
+  const adm=me.role=="admin",pend=profs.filter(x=>x.status=="pending").length;
+  let h='<div class="top"><div><h1>🩺 Pushimet Mjekësore '+Y+'</h1><p class="sub">'+esc(me.full_name)+' · '+esc(me.position)+'</p></div><button onclick="out()">Dil</button></div>';
+  if(adm)h+='<div class="tabs"><button class="'+(tab=="req"?"on":"")+'" onclick="go(\'req\')">Kërkesat'+(pend?" ("+pend+")":"")+'</button><button class="'+(tab=="staff"?"on":"")+'" onclick="go(\'staff\')">Stafi</button><button class="'+(tab=="me"?"on":"")+'" onclick="go(\'me\')">Pushimet e mia</button></div>';
+  h+=adm&&tab=="req"?reqView():adm&&tab=="staff"?staffView():meView();
+  app.innerHTML=h;
+  if($("#from")){$("#from").value=keep.f||"";$("#to").value=keep.t||"";$("#note").value=keep.n||"";calc()}
+}
+const go=t=>{tab=t;draw()};
+
+function authView(){
+  const su=mode=="up";
+  return '<div class="card auth"><h1>🩺 Pushimet Mjekësore</h1><p class="sub">'+(su?"Krijoni llogarinë tuaj. Hyrja aktivizohet pasi ta miratojë administratori.":"Hyni me llogarinë tuaj.")+'</p>'+
+  (su?'<label>Emri dhe mbiemri</label><input id="nm" autocomplete="name"><label>Pozita</label><input id="ps" placeholder="p.sh. Cashier, Pastrim, Mirëmbajtje">':'')+
+  '<label>Email</label><input id="em" type="email" autocomplete="email"><label>Fjalëkalimi'+(su?" (minimumi 8 karaktere)":"")+'</label><input id="pw" type="password" autocomplete="'+(su?"new-password":"current-password")+'"><p class="err" id="err">'+esc(msg)+'</p>'+
+  '<button class="p" id="sub" onclick="'+(su?"signup()":"signin()")+'">'+(su?"Regjistrohu":"Hyr")+'</button> <span class="lnk" onclick="mode=\''+(su?"in":"up")+'\';msg=\'\';draw()">'+(su?"Kam llogari":"Krijo llogari")+'</span></div>';
+}
+async function signin(){
+  $("#err").textContent="";$("#sub").disabled=true;
+  const {error}=await sb.auth.signInWithPassword({email:$("#em").value.trim(),password:$("#pw").value});
+  if(error){$("#err").textContent=error.message=="Invalid login credentials"?"Email ose fjalëkalim i gabuar.":error.message;$("#sub").disabled=false}
+}
+async function signup(){
+  const n=$("#nm").value.trim(),p=$("#ps").value.trim(),e=$("#em").value.trim(),w=$("#pw").value,er=$("#err");
+  er.textContent="";
+  if(!n||!p||!e||w.length<8){er.textContent="Plotësoni të gjitha fushat (fjalëkalimi minimumi 8 karaktere).";return}
+  $("#sub").disabled=true;
+  const {data,error}=await sb.auth.signUp({email:e,password:w,options:{data:{full_name:n,position:p}}});
+  if(error){er.textContent=error.message;$("#sub").disabled=false;return}
+  if(!data.session){msg="Kontrolloni email-in për të konfirmuar llogarinë, pastaj hyni.";mode="in";draw()}
+}
+const out=()=>sb.auth.signOut();
+
+function entry(e,del){
+  const med=e.leave_type=="mjekesor";
+  return '<div class="ent"><div><b>'+esc(T[e.leave_type][0])+'</b><br>'+fmt(e.from_date)+' – '+fmt(e.to_date)+' · <b>'+e.days+'</b> ditë '+(med?(e.doc_path?'<span class="badge o">Me dëshmi</span>':'<span class="badge w">Pa dëshmi (≤3)</span>'):'')+(e.note?'<div class="mut">'+esc(e.note)+'</div>':'')+'</div><div>'+(e.doc_path?'<span class="lnk" onclick="openDoc(\''+esc(e.doc_path)+'\')">Dëshmia</span> ':'')+(del?'<button onclick="del(\''+e.id+'\')">'+(armed==e.id?"Konfirmo?":"Fshi")+'</button>':'')+'</div></div>';
+}
+function menuHtml(){
+  let h='<label>Lloji i pushimit</label><button type="button" class="sel" onclick="menu=!menu;sub=null;draw()">'+(ltype?esc(T[ltype][0]):"Zgjidhni llojin e pushimit")+' ▾</button>';
+  if(menu)h+='<div class="menu">'+MENU.map((m,n)=>m.k?'<div class="mi" onclick="pick(\''+m.k+'\')">'+esc(T[m.k][0])+'</div>':'<div class="mi" onclick="sub=sub===\''+n+'\'?null:\''+n+'\';draw()"><span>'+esc(m.l)+'</span><span>'+(sub===String(n)?"▾":"▸")+'</span></div>'+(sub===String(n)?m.i.map(k=>'<div class="mi si" onclick="pick(\''+k+'\')">'+esc(T[k][0])+(T[k][1]?' <span class="mut">('+T[k][1]+' ditë)</span>':'')+'</div>').join(""):"")).join("")+'</div>';
+  return h;
+}
+function pick(k){ltype=k;menu=false;sub=null;draw()}
+function meView(){
+  let h='<div class="card"><h2>Gjendja e pushimeve '+Y+'</h2><div class="scroll"><table><tr><th>Lloji i pushimit</th><th>Të lejuara</th><th>Të shfrytëzuara</th><th>Në dispozicion</th></tr>'+Object.keys(T).map(k=>{const a=T[k][1],u=used(myAbs,k);return '<tr><td>'+esc(T[k][0])+'</td><td>'+(a||"—")+'</td><td>'+u+'</td><td>'+(a?a-u:"—")+'</td></tr>'}).join("")+'</table></div></div>';
+  h+='<div class="card"><h2>Raporto pushim</h2>'+menuHtml()+'<div class="row" style="margin-top:4px"><div><label>Prej</label><input type="date" id="from" oninput="calc()"></div><div><label>Deri</label><input type="date" id="to" oninput="calc()"></div><div><label>Ditë</label><input type="number" id="days" min="1" max="20"></div></div><label>Shënim (opsionale)</label><textarea id="note" rows="2"></textarea><div id="docbox" style="display:none"><div class="warn">Pushimi mjekësor mbi 3 ditë: ngarkoni dëshminë e mjekut (PDF ose foto).</div><label>Dëshmia e mjekut</label><input type="file" id="file" accept="application/pdf,image/*"></div><p class="err" id="err"></p><button class="p" id="go" onclick="send()">Dërgo</button></div>';
+  h+='<div class="card"><h2>Historiku</h2>'+(myAbs.length?myAbs.map(e=>entry(e,false)).join(""):'<p class="mut">Nuk ka pushime të regjistruara.</p>')+'</div>';
+  return h;
+}
+function reqView(){
+  const p=profs.filter(x=>x.status=="pending");
+  if(!p.length)return '<div class="card mut">Asnjë kërkesë në pritje.</div>';
+  return '<div class="card"><h2>Kërkesa për llogari</h2>'+p.map(x=>'<div class="ent"><div><b>'+esc(x.full_name)+'</b><div class="mut">'+esc(x.position)+' · '+new Date(x.created_at).toLocaleDateString("sq")+'</div></div><div><button class="p" onclick="setStatus(\''+x.id+'\',\'approved\')">Mirato</button> <button onclick="setStatus(\''+x.id+'\',\'rejected\')">Refuzo</button></div></div>').join("")+'</div>';
+}
+function staffView(){
+  const ap=profs.filter(x=>x.status=="approved");
+  if(!ap.length)return '<div class="card mut">Asnjë punonjës i miratuar.</div>';
+  const by=id=>allAbs.filter(a=>a.user_id==id);
+  const rows=ap.map(s=>{const e=by(s.id);const oth=Object.keys(T).filter(k=>k!="vjetor"&&k!="mjekesor").reduce((n,k)=>n+used(e,k),0);return '<tr><td>'+esc(s.full_name)+'</td><td>'+esc(s.position)+'</td><td>'+used(e,"vjetor")+'/20</td><td>'+used(e,"mjekesor")+'/20</td><td>'+oth+'</td></tr>'}).join("");
+  let h='<div class="card"><div class="top" style="margin-bottom:8px"><h2 style="margin:0">Përmbledhje</h2><button onclick="csv()">Eksporto CSV</button></div><div class="scroll"><table><tr><th>Emri</th><th>Pozita</th><th>Vjetor</th><th>Mjekësor</th><th>Të tjera</th></tr>'+rows+'</table></div></div>';
+  h+=ap.map(s=>'<div class="card"><h2>'+esc(s.full_name)+' <span class="mut">· '+esc(s.position)+'</span></h2>'+(by(s.id).length?by(s.id).map(e=>entry(e,true)).join(""):'<span class="mut">Pa pushime.</span>')+'</div>').join("");
+  return h;
+}
+function calc(){
+  const f=$("#from").value,t=$("#to").value;
+  if(f&&t&&t>=f)$("#days").value=span(f,t);
+  $("#docbox").style.display=(ltype=="mjekesor"&&+$("#days").value>3)?"block":"none";
+}
+async function send(){
+  const f=$("#from").value,t=$("#to").value,d=+$("#days").value,note=$("#note").value.trim(),file=$("#file")&&$("#file").files[0],er=$("#err");
+  er.textContent="";
+  if(!ltype){er.textContent="Zgjidhni llojin e pushimit.";return}
+  const a=T[ltype][1],left=a?a-used(myAbs,ltype):1e9,med=ltype=="mjekesor"&&d>3;
+  if(!f||!t||t<f||!(d>0)){er.textContent="Zgjidhni datat e sakta.";return}
+  if(d>span(f,t)){er.textContent="Ditët nuk mund të jenë më shumë se periudha e zgjedhur.";return}
+  if(d>left){er.textContent="Keni vetëm "+left+" ditë në dispozicion për këtë lloj pushimi.";return}
+  if(med&&!file){er.textContent="Mbi 3 ditë kërkohet dëshmia e mjekut. Ngarkoni skedarin.";return}
+  $("#go").disabled=true;
+  let path=null;
+  if(med){
+    path=session.user.id+"/"+Date.now()+"-"+file.name.replace(/[^A-Za-z0-9._-]/g,"_");
+    const u=await sb.storage.from("documents").upload(path,file,{contentType:file.type});
+    if(u.error){er.textContent="Ngarkimi i dëshmisë dështoi: "+u.error.message;$("#go").disabled=false;return}
+  }
+  const r=await sb.from("absences").insert({user_id:session.user.id,leave_type:ltype,from_date:f,to_date:t,days:d,note:note||null,doc_path:path});
+  if(r.error){
+    if(path)await sb.storage.from("documents").remove([path]);
+    er.textContent="Dërgimi dështoi: "+r.error.message;$("#go").disabled=false;return;
+  }
+  $("#from").value="";$("#to").value="";$("#note").value="";ltype="";
+  await load();
+}
+async function del(id){
+  if(armed!=id){armed=id;draw();return}
+  armed=null;
+  await sb.from("absences").delete().eq("id",id);
+  load();
+}
+async function setStatus(id,st){await sb.from("profiles").update({status:st}).eq("id",id);load()}
+async function openDoc(p){
+  const w=window.open("","_blank");
+  const {data,error}=await sb.storage.from("documents").createSignedUrl(p,120);
+  if(error||!data){if(w)w.close();alert("Dëshmia nuk u hap.");return}
+  if(w)w.location=data.signedUrl;else location.href=data.signedUrl;
+}
+function csv(){
+  const q=v=>'"'+String(v==null?"":v).replace(/"/g,'""')+'"';
+  let c="Emri,Pozita,Lloji,Prej,Deri,Ditë,Dëshmi,Shënim\n";
+  allAbs.forEach(e=>{const s=profs.find(x=>x.id==e.user_id)||{};c+=[s.full_name,s.position,T[e.leave_type][0],e.from_date,e.to_date,e.days,e.doc_path?"Po":"Jo",e.note].map(q).join(",")+"\n"});
+  const a=document.createElement("a");a.href=URL.createObjectURL(new Blob(["\ufeff"+c],{type:"text/csv"}));a.download="pushimet-mjekesore-"+Y+".csv";a.click();
+}
+sb.auth.getSession().then(r=>{if(!r.data.session&&!session)draw()});
+</script>
+</body>
+</html>
