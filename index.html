@@ -180,7 +180,7 @@ async function load(){
 
 function shell(inner){
   const adm=me.role=="admin",pend=profs.filter(x=>x.status=="pending").length+allAbs.filter(a=>st(a)=="pending").length;
-  let h='<div class="top"><div class="wrap"><span>Pushimet e Stafit · '+Y+'</span><span>'+(adm?"Administrator":"Punonjës")+'</span></div></div>';
+  let h='<div class="top"><div class="wrap"><span>Kuleta digjitale personale</span><span>'+(adm?"Administrator":"Punonjës")+'</span></div></div>';
   h+='<div class="bar"><div class="wrap">'+logoBlock(30)+'<button class="icon-btn" onclick="out()" aria-label="Dil" title="Dil">'+I.out+'</button></div></div>';
   h+='<div class="wrap who"><p class="mut">Mirë se vini,</p><h1>'+esc(me.full_name)+'</h1><p class="mut">'+esc(me.position)+'</p>';
   if(adm)h+='<nav class="tabs" aria-label="Seksionet"><button class="'+(tab=="req"?"on":"")+'" onclick="go(\'req\')">KËRKESAT'+(pend?' <span class="cnt">'+pend+'</span>':'')+'</button><button class="'+(tab=="staff"?"on":"")+'" onclick="go(\'staff\')">STAFI</button><button class="'+(tab=="me"?"on":"")+'" onclick="go(\'me\')">PUSHIMET E MIA</button></nav>';
