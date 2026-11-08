@@ -89,7 +89,12 @@ button{cursor:pointer}
 .warn{display:flex;gap:10px;align-items:flex-start;background:#FFF8E6;border:1.5px solid #F2C14E;color:#5C3800;padding:12px 14px;border-radius:12px;margin-top:14px;font-size:13px}
 .err{color:var(--bad);min-height:20px;margin-top:10px;font-size:13px;font-weight:600}
 .err.ok{color:var(--otx)}
-.ent{display:flex;gap:12px;align-items:center;padding:12px 0;border-top:1px solid var(--bd)}
+.ent{display:flex;flex-wrap:wrap;gap:12px;align-items:center;padding:12px 0;border-top:1px solid var(--bd)}
+select{width:100%;height:48px;border:1.5px solid var(--bd);border-radius:10px;padding:0 12px;background:#fff;font:inherit;font-size:15px;color:inherit}
+.edit{flex-basis:100%;width:100%;border-top:1px dashed var(--bd);margin-top:4px;padding-top:4px}
+.row.r3{grid-template-columns:repeat(3,minmax(0,1fr))}
+.edit .acts{display:flex;gap:8px;flex-wrap:wrap;margin-top:6px}
+.cmt{font-size:13px;color:var(--navy);background:var(--tint);border-radius:8px;padding:6px 10px;margin-top:6px}
 .ent:first-of-type{border-top:0;padding-top:0}
 .ico{width:40px;height:40px;border-radius:10px;background:var(--tint);display:flex;align-items:center;justify-content:center;flex-shrink:0}
 .ent .txt{flex-grow:1;min-width:0}
@@ -110,7 +115,7 @@ td.wrapc{white-space:normal}
 .pm i em{display:block;height:100%;background:var(--blue)}
 .req{border:1px solid var(--bd);border-radius:12px;padding:14px;display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;margin-top:10px}
 .sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
-@media (max-width:480px){.row{grid-template-columns:minmax(0,1fr) minmax(0,1fr)}.row>div:last-child{grid-column:1/-1}.hero h1{font-size:26px}.ent{flex-wrap:wrap}.ent .act{width:100%;justify-content:flex-start;padding-left:52px}.ent .act:empty{display:none}}
+@media (max-width:480px){.row{grid-template-columns:minmax(0,1fr) minmax(0,1fr)}.row>div:last-child{grid-column:1/-1}.hero h1{font-size:26px}.row.r3{grid-template-columns:1fr}.ent{flex-wrap:wrap}.ent .act{width:100%;justify-content:flex-start;padding-left:52px}.ent .act:empty{display:none}}
 </style>
 </head>
 <body>
@@ -148,7 +153,7 @@ const I={
 const icoFor=k=>k=="mjekesor"?I.plus:k=="vjetor"?I.sun:I.cal;
 const logoBlock=s=>'<div class="logo">'+I.logo(s)+'<div><b>038</b><span>PARKING CENTER</span></div></div>';
 const FOOT='<p class="foot">© 038 Parking Center · Prishtinë</p>';
-let ltype="",menu=false,sub=null,session=null,me=null,mode="in",tab="me",myAbs=[],profs=[],allAbs=[],armed=null,msg="",q="",flash="",recovering=false;
+let ltype="",menu=false,sub=null,session=null,me=null,mode="in",tab="me",myAbs=[],profs=[],allAbs=[],armed=null,msg="",q="",flash="",recovering=false,editing=null;
 
 sb.auth.onAuthStateChange((ev,s)=>{
   if(ev=="TOKEN_REFRESHED")return;
@@ -249,7 +254,7 @@ const out=()=>sb.auth.signOut();
 function entry(e,del){
   const med=e.leave_type=="mjekesor";
   const badge=STB[st(e)]+(med?(e.doc_path?'<span class="badge t">Me dëshmi</span>':'<span class="badge t">Pa dëshmi (≤3)</span>'):'');
-  return '<div class="ent"><div class="ico">'+icoFor(e.leave_type)+'</div><div class="txt"><b>'+esc(T[e.leave_type][0])+'</b><div>'+fmt(e.from_date)+' – '+fmt(e.to_date)+' · '+e.days+' ditë</div>'+(e.note?'<div>'+esc(e.note)+'</div>':'')+'</div><div class="act">'+badge+(e.doc_path?'<button type="button" class="lnk" style="border:0;background:none;padding:0;font-size:13px" onclick="openDoc(\''+esc(e.doc_path)+'\')">Dëshmia</button>':'')+(del?'<button class="btn sm'+(armed==e.id?' danger':'')+'" onclick="del(\''+e.id+'\')">'+(armed==e.id?"Konfirmo?":"Fshi")+'</button>':'')+'</div></div>';
+  return '<div class="ent"><div class="ico">'+icoFor(e.leave_type)+'</div><div class="txt"><b>'+esc(T[e.leave_type][0])+'</b><div>'+fmt(e.from_date)+' – '+fmt(e.to_date)+' · '+e.days+' ditë</div>'+(e.note?'<div>'+esc(e.note)+'</div>':'')+(e.edited_at?'<div>Ndryshuar nga administratori</div>':'')+(e.admin_comment?'<div class="cmt"><b>Koment nga administratori:</b> '+esc(e.admin_comment)+'</div>':'')+'</div><div class="act">'+badge+(e.doc_path?'<button type="button" class="lnk" style="border:0;background:none;padding:0;font-size:13px" onclick="openDoc(\''+esc(e.doc_path)+'\')">Dëshmia</button>':'')+(del?'<button class="btn sm" onclick="editLeave(\''+e.id+'\')">Ndrysho</button><button class="btn sm'+(armed==e.id?' danger':'')+'" onclick="del(\''+e.id+'\')">'+(armed==e.id?"Konfirmo?":"Fshi")+'</button>':'')+'</div>'+(del&&editing==e.id?editForm(e):'')+'</div>';
 }
 function menuHtml(){
   let h='<label id="lt">Lloji i pushimit</label><button type="button" aria-labelledby="lt" aria-expanded="'+menu+'" class="sel'+(ltype?"":" ph")+'" onclick="menu=!menu;sub=null;draw()"><span>'+(ltype?esc(T[ltype][0]):"Zgjidhni llojin e pushimit")+'</span>'+I.down+'</button>';
@@ -271,7 +276,7 @@ function reqView(){
   const p=profs.filter(x=>x.status=="pending"),la=allAbs.filter(a=>st(a)=="pending");
   const nm=id=>profs.find(x=>x.id==id)||{};
   let h='<div class="card"><div class="hd"><h2>Kërkesa për pushim</h2>'+(la.length?'<span class="badge t">'+la.length+' në pritje</span>':'')+'</div>';
-  h+=la.length?la.map(e=>{const s=nm(e.user_id),med=e.leave_type=="mjekesor";return '<div class="req"><div style="display:flex;gap:12px;align-items:center;min-width:0"><span class="av">'+esc(ini(s.full_name))+'</span><div style="min-width:0"><b>'+esc(s.full_name||"—")+'</b> <span class="mut" style="font-size:13px">· '+esc(s.position||"")+'</span><div style="font-size:14px">'+esc(T[e.leave_type][0])+'</div><div class="mut" style="font-size:13px">'+fmt(e.from_date)+' – '+fmt(e.to_date)+' · <b style="color:var(--tx)">'+e.days+' ditë</b>'+(T[e.leave_type][1]?' · të miratuara këtë vit: '+used(allAbs.filter(a=>a.user_id==e.user_id),e.leave_type)+'/'+T[e.leave_type][1]:'')+'</div>'+(e.note?'<div class="mut" style="font-size:13px">“'+esc(e.note)+'”</div>':'')+(e.doc_path?(true?'<button type="button" class="lnk" style="border:0;background:none;padding:0;font-size:13px" onclick="openDoc(\''+esc(e.doc_path)+'\')">Shiko dëshminë</button>':''):'')+'</div></div><div style="display:flex;gap:8px"><button class="btn p" onclick="setLeave(\''+e.id+'\',\'approved\')">Mirato</button><button class="btn" onclick="setLeave(\''+e.id+'\',\'rejected\')">Refuzo</button></div></div>'}).join(""):'<p class="mut">Asnjë kërkesë për pushim në pritje.</p>';
+  h+=la.length?la.map(e=>{const s=nm(e.user_id),med=e.leave_type=="mjekesor";return '<div class="req"><div style="display:flex;gap:12px;align-items:center;min-width:0"><span class="av">'+esc(ini(s.full_name))+'</span><div style="min-width:0"><b>'+esc(s.full_name||"—")+'</b> <span class="mut" style="font-size:13px">· '+esc(s.position||"")+'</span><div style="font-size:14px">'+esc(T[e.leave_type][0])+'</div><div class="mut" style="font-size:13px">'+fmt(e.from_date)+' – '+fmt(e.to_date)+' · <b style="color:var(--tx)">'+e.days+' ditë</b>'+(T[e.leave_type][1]?' · të miratuara këtë vit: '+used(allAbs.filter(a=>a.user_id==e.user_id),e.leave_type)+'/'+T[e.leave_type][1]:'')+'</div>'+(e.note?'<div class="mut" style="font-size:13px">“'+esc(e.note)+'”</div>':'')+(e.doc_path?(true?'<button type="button" class="lnk" style="border:0;background:none;padding:0;font-size:13px" onclick="openDoc(\''+esc(e.doc_path)+'\')">Shiko dëshminë</button>':''):'')+'</div></div><div style="display:flex;gap:8px"><button class="btn p" onclick="setLeave(\''+e.id+'\',\'approved\')">Mirato</button><button class="btn" onclick="setLeave(\''+e.id+'\',\'rejected\')">Refuzo</button><button class="btn ol" onclick="editLeave(\''+e.id+'\')">Ndrysho / Koment</button></div>'+(editing==e.id?editForm(e):'')+'</div>'}).join(""):'<p class="mut">Asnjë kërkesë për pushim në pritje.</p>';
   h+='</div><div class="card"><div class="hd"><h2>Kërkesa për llogari</h2>'+(p.length?'<span class="badge t">'+p.length+' në pritje</span>':'')+'</div>';
   h+=p.length?p.map(x=>'<div class="req"><div style="display:flex;gap:12px;align-items:center"><span class="av">'+esc(ini(x.full_name))+'</span><div><b>'+esc(x.full_name)+'</b><div class="mut" style="font-size:13px">'+esc(x.position)+' · '+new Date(x.created_at).toLocaleDateString("sq")+'</div></div></div><div style="display:flex;gap:8px"><button class="btn p" onclick="setStatus(\''+x.id+'\',\'approved\')">Mirato</button><button class="btn" onclick="setStatus(\''+x.id+'\',\'rejected\')">Refuzo</button></div></div>').join(""):'<p class="mut">Asnjë kërkesë për llogari në pritje.</p>';
   return h+'</div>';
@@ -331,6 +336,22 @@ async function del(id){
   await sb.from("absences").delete().eq("id",id);
   load();
 }
+function editForm(e){
+  const pend=st(e)=="pending";
+  return '<div class="edit"><div class="row r3"><div><label for="et">Lloji i pushimit</label><select id="et">'+Object.keys(T).map(k=>'<option value="'+k+'"'+(k==e.leave_type?' selected':'')+'>'+esc(T[k][0])+'</option>').join("")+'</select></div><div><label for="ef">Prej</label><input type="date" id="ef" value="'+e.from_date+'" oninput="ecalc()"></div><div><label for="eto">Deri</label><input type="date" id="eto" value="'+e.to_date+'" oninput="ecalc()"></div></div><label for="ed">Ditë</label><input type="number" id="ed" min="1" max="20" value="'+e.days+'" style="max-width:120px"><label for="ec">Koment për punonjësin (opsionale)</label><textarea id="ec" rows="2" maxlength="1000" placeholder="p.sh. Datat u korrigjuan sipas marrëveshjes.">'+esc(e.admin_comment||"")+'</textarea><p class="err" id="eerr"></p><div class="acts">'+(pend?'<button class="btn p" onclick="saveLeave(\''+e.id+'\',\'approved\')">Ruaj dhe mirato</button><button class="btn" onclick="saveLeave(\''+e.id+'\',\'rejected\')">Ruaj dhe refuzo</button><button class="btn ol" onclick="saveLeave(\''+e.id+'\')">Ruaj vetëm ndryshimet</button>':'<button class="btn p" onclick="saveLeave(\''+e.id+'\')">Ruaj ndryshimet</button>')+'<button class="btn" onclick="editing=null;draw()">Anulo</button></div></div>';
+}
+function editLeave(id){editing=editing==id?null:id;armed=null;draw();const f=$("#ef");if(f)f.scrollIntoView({block:"center",behavior:"smooth"})}
+function ecalc(){const f=$("#ef").value,t=$("#eto").value;if(f&&t&&t>=f)$("#ed").value=span(f,t)}
+async function saveLeave(id,s){
+  const lt=$("#et").value,f=$("#ef").value,t=$("#eto").value,d=+$("#ed").value,c=$("#ec").value.trim(),er=$("#eerr");er.textContent="";
+  if(!f||!t||t<f||!(d>0)){er.textContent="Zgjidhni datat e sakta.";return}
+  if(d>span(f,t)){er.textContent="Ditët nuk mund të jenë më shumë se periudha e zgjedhur.";return}
+  const pl={leave_type:lt,from_date:f,to_date:t,days:d,admin_comment:c||null};if(s)pl.status=s;
+  document.querySelectorAll(".edit button").forEach(b=>b.disabled=true);
+  const r=await sb.from("absences").update(pl).eq("id",id);
+  if(r.error){document.querySelectorAll(".edit button").forEach(b=>b.disabled=false);er.textContent=/doc_required/.test(r.error.message)?"Pushimi mjekësor mbi 3 ditë kërkon dëshmi të mjekut, të cilën punonjësi nuk e ka ngarkuar.":/Kaluat/.test(r.error.message)?r.error.message:"Ruajtja dështoi: "+r.error.message;return}
+  editing=null;load();
+}
 async function setStatus(id,s){await sb.from("profiles").update({status:s}).eq("id",id);load()}
 async function setLeave(id,s){const r=await sb.from("absences").update({status:s}).eq("id",id);if(r.error)alert("Veprimi dështoi: "+r.error.message);load()}
 async function openDoc(p){
@@ -341,8 +362,8 @@ async function openDoc(p){
 }
 function csv(){
   const qq=v=>'"'+String(v==null?"":v).replace(/"/g,'""')+'"';
-  let c="Emri,Pozita,Lloji,Prej,Deri,Ditë,Statusi,Dëshmi,Shënim\n";
-  allAbs.forEach(e=>{const s=profs.find(x=>x.id==e.user_id)||{};c+=[s.full_name,s.position,T[e.leave_type][0],e.from_date,e.to_date,e.days,{pending:"Në pritje",approved:"Miratuar",rejected:"Refuzuar"}[st(e)],e.doc_path?"Po":"Jo",e.note].map(qq).join(",")+"\n"});
+  let c="Emri,Pozita,Lloji,Prej,Deri,Ditë,Statusi,Dëshmi,Shënim,Koment i adminit\n";
+  allAbs.forEach(e=>{const s=profs.find(x=>x.id==e.user_id)||{};c+=[s.full_name,s.position,T[e.leave_type][0],e.from_date,e.to_date,e.days,{pending:"Në pritje",approved:"Miratuar",rejected:"Refuzuar"}[st(e)],e.doc_path?"Po":"Jo",e.note,e.admin_comment].map(qq).join(",")+"\n"});
   const a=document.createElement("a");a.href=URL.createObjectURL(new Blob(["\ufeff"+c],{type:"text/csv"}));a.download="pushimet-stafit-"+Y+".csv";a.click();
 }
 sb.auth.getSession().then(r=>{if(!r.data.session&&!session)draw()});
