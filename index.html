@@ -148,10 +148,11 @@ const I={
 const icoFor=k=>k=="mjekesor"?I.plus:k=="vjetor"?I.sun:I.cal;
 const logoBlock=s=>'<div class="logo">'+I.logo(s)+'<div><b>038</b><span>PARKING CENTER</span></div></div>';
 const FOOT='<p class="foot">© 038 Parking Center · Prishtinë</p>';
-let ltype="",menu=false,sub=null,session=null,me=null,mode="in",tab="me",myAbs=[],profs=[],allAbs=[],armed=null,msg="",q="",flash="";
+let ltype="",menu=false,sub=null,session=null,me=null,mode="in",tab="me",myAbs=[],profs=[],allAbs=[],armed=null,msg="",q="",flash="",recovering=false;
 
 sb.auth.onAuthStateChange((ev,s)=>{
   if(ev=="TOKEN_REFRESHED")return;
+  if(ev=="PASSWORD_RECOVERY")recovering=true;
   session=s;setTimeout(load,0);
 });
 
@@ -184,6 +185,7 @@ function shell(inner){
 function draw(){
   const keep={f:$("#from")&&$("#from").value,t:$("#to")&&$("#to").value,d:$("#days")&&$("#days").value,n:$("#note")&&$("#note").value};
   const app=$("#app");
+  if(recovering&&session)return app.innerHTML=recoverView();
   if(!session)return app.innerHTML=authView();
   if(!me)return app.innerHTML='<div class="hero"><div class="wrap">'+logoBlock(34)+'</div></div><div class="auth"><div class="card"><p>Duke ngarkuar profilin…</p><button class="btn" style="margin-top:14px" onclick="out()">Dil</button></div></div>';
   if(me.status!="approved"){
@@ -196,14 +198,37 @@ function draw(){
 const go=t=>{tab=t;menu=false;draw()};
 
 function authView(){
-  const su=mode=="up";
-  return '<div class="hero"><div class="wrap">'+logoBlock(34)+'<h1>Pushimet<br>e Stafit</h1><p>Raportoni pushimet dhe ndiqni ditët në dispozicion.</p></div></div>'+
+  const su=mode=="up",fg=mode=="forgot";
+  const hero='<div class="hero"><div class="wrap">'+logoBlock(34)+'<h1>Pushimet<br>e Stafit</h1><p>Raportoni pushimet dhe ndiqni ditët në dispozicion.</p></div></div>';
+  if(fg)return hero+'<div class="auth"><div class="card"><h2 style="font-size:20px;margin:0 0 4px">Rivendosni fjalëkalimin</h2><p class="mut" style="font-size:14px">Shkruani email-in me të cilin jeni regjistruar. Do t’ju dërgojmë një link për të vendosur fjalëkalim të ri.</p><label for="em">Email</label><input id="em" type="email" autocomplete="email" onkeydown="if(event.key==\'Enter\')$(\'#sub\').click()"><p class="err'+(msg?" ok":"")+'" id="err">'+esc(msg)+'</p><button class="btn p full" style="margin-top:6px" id="sub" onclick="forgot()">Dërgo linkun</button><p class="mut" style="text-align:center;font-size:14px;margin-top:16px"><button type="button" class="lnk" style="border:0;background:none;padding:0" onclick="mode=\'in\';msg=\'\';draw()">Kthehu te hyrja</button></p></div></div>'+FOOT;
+  return hero+
   '<div class="auth"><div class="card"><h2 style="font-size:20px;margin:0 0 4px">'+(su?"Krijoni llogarinë tuaj":"Hyni me llogarinë tuaj")+'</h2>'+(su?'<p class="mut" style="font-size:14px">Hyrja aktivizohet pasi ta miratojë administratori.</p>':'')+
   (su?'<label for="nm">Emri dhe mbiemri</label><input id="nm" autocomplete="name"><label for="ps">Pozita</label><input id="ps" placeholder="p.sh. Cashier, Pastrim, Mirëmbajtje">':'')+
-  '<label for="em">Email</label><input id="em" type="email" autocomplete="email"><label for="pw">Fjalëkalimi'+(su?" (minimumi 8 karaktere)":"")+'</label><input id="pw" type="password" autocomplete="'+(su?"new-password":"current-password")+'" onkeydown="if(event.key==\'Enter\')$(\'#sub\').click()"><p class="err'+(msg&&!su?" ok":"")+'" id="err">'+esc(msg)+'</p>'+
+  '<label for="em">Email</label><input id="em" type="email" autocomplete="email"><label for="pw">Fjalëkalimi'+(su?" (minimumi 8 karaktere)":"")+'</label><input id="pw" type="password" autocomplete="'+(su?"new-password":"current-password")+'" onkeydown="if(event.key==\'Enter\')$(\'#sub\').click()">'+(su?'':'<p style="text-align:right;margin-top:8px;font-size:13px"><button type="button" class="lnk" style="border:0;background:none;padding:0" onclick="mode=\'forgot\';msg=\'\';draw()">Keni harruar fjalëkalimin?</button></p>')+'<p class="err'+(msg&&!su?" ok":"")+'" id="err">'+esc(msg)+'</p>'+
   '<button class="btn p full" style="margin-top:6px" id="sub" onclick="'+(su?"signup()":"signin()")+'">'+(su?"Regjistrohu":"Hyr")+'</button>'+
   '<p class="mut" style="text-align:center;font-size:14px;margin-top:16px">'+(su?"Keni llogari? ":"Nuk keni llogari? ")+'<button type="button" class="lnk" style="border:0;background:none;padding:0" onclick="mode=\''+(su?"in":"up")+'\';msg=\'\';draw()">'+(su?"Hyni":"Krijo llogari")+'</button></p></div>'+
   '<div class="info">'+I.info+'<span>Llogaritë e reja aktivizohen pasi t’i miratojë administratori.</span></div></div>'+FOOT;
+}
+function recoverView(){
+  return '<div class="hero"><div class="wrap">'+logoBlock(34)+'<h1>Pushimet<br>e Stafit</h1></div></div><div class="auth"><div class="card"><h2 style="font-size:20px;margin:0 0 4px">Vendosni fjalëkalim të ri</h2><p class="mut" style="font-size:14px">Minimumi 8 karaktere.</p><label for="np">Fjalëkalimi i ri</label><input id="np" type="password" autocomplete="new-password"><label for="np2">Përsëriteni fjalëkalimin</label><input id="np2" type="password" autocomplete="new-password" onkeydown="if(event.key==\'Enter\')$(\'#sub\').click()"><p class="err" id="err"></p><button class="btn p full" style="margin-top:6px" id="sub" onclick="savePw()">Ruaj fjalëkalimin</button></div></div>'+FOOT;
+}
+async function forgot(){
+  const e=$("#em").value.trim(),er=$("#err");er.className="err";er.textContent="";
+  if(!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(e)){er.textContent="Shkruani një email të vlefshëm.";return}
+  $("#sub").disabled=true;
+  const {error}=await sb.auth.resetPasswordForEmail(e,{redirectTo:location.origin+"/"});
+  if(error&&!/rate|limit|seconds/i.test(error.message)){er.textContent=error.message;$("#sub").disabled=false;return}
+  if(error){er.textContent="Prisni pak para se të kërkoni një link tjetër.";$("#sub").disabled=false;return}
+  msg="Nëse ky email është i regjistruar, do të merrni një link brenda pak minutash. Kontrolloni edhe dosjen Spam.";draw();
+}
+async function savePw(){
+  const a=$("#np").value,b=$("#np2").value,er=$("#err");er.textContent="";
+  if(a.length<8){er.textContent="Fjalëkalimi duhet të ketë minimumi 8 karaktere.";return}
+  if(a!==b){er.textContent="Fjalëkalimet nuk përputhen.";return}
+  $("#sub").disabled=true;
+  const {error}=await sb.auth.updateUser({password:a});
+  if(error){er.textContent=error.message;$("#sub").disabled=false;return}
+  recovering=false;history.replaceState(null,"",location.pathname);flash="Fjalëkalimi u ndryshua me sukses.";load();
 }
 async function signin(){
   const er=$("#err");er.textContent="";er.className="err";$("#sub").disabled=true;
