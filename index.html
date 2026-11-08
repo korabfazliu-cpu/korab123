@@ -71,6 +71,8 @@ main.wrap{position:relative;margin-top:-64px;padding-bottom:20px;display:flex;fl
 .ring b{font-size:26px;line-height:1}.ring span{font-size:11px;color:var(--mut)}
 .big h2{margin:0 0 4px}.big p{font-size:13px;color:var(--mut)}
 .minis{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+.minis.m3{grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
+.minis.m3 .mini{padding:14px 12px}
 .mini{background:#fff;border:0;border-radius:20px;padding:16px;box-shadow:0 4px 14px rgba(0,36,106,.06)}
 .mini small{display:block;font-size:12px;font-weight:600;color:var(--mut)}
 .mini b{font-size:24px;font-weight:800}
@@ -183,9 +185,9 @@ const sumY=(es,k,f)=>(es||[]).filter(e=>e.from_date.slice(0,4)==Y&&e.leave_type=
 const used=(es,k)=>sumY(es,k,s=>s=="approved");
 const held=(es,k)=>sumY(es,k,s=>s!="rejected");
 const STB={pending:'<span class="badge w">Në pritje</span>',approved:'<span class="badge o">Miratuar</span>',rejected:'<span class="badge r">Refuzuar</span>'};
-const T={vjetor:["Pushimi vjetor",20],mjekesor:["Pushimi mjekësor",20],martese:["Pushimi në rast martese",5],vdekje:["Pushimi në rast vdekjeje të anëtarit të ngushtë të familjes",5],lindje:["Pushim për lindje të fëmijës",3],gjak:["Pushim për dhënie vullnetare të gjakut",2],papagese:["Pushim pa pagesë",0],bartur:["Pushim i bartur nga viti paraprak",0],kompenzim:["Pushim me kompenzim",0]};
-const SPECIAL=["martese","vdekje","lindje","gjak"],OTHER=["papagese","bartur","kompenzim"];
-const MENU=[{k:"vjetor"},{k:"mjekesor"},{l:"Raste të veçanta",i:SPECIAL},{l:"Të tjera",i:OTHER}];
+const T={vjetor:["Pushimi vjetor",20],mjekesor:["Pushimi mjekësor",20],martese:["Pushimi në rast martese",5],vdekje:["Pushimi në rast vdekjeje të anëtarit të ngushtë të familjes",5],lindje:["Pushim për lindje të fëmijës",3],gjak:["Pushim për dhënie vullnetare të gjakut",2],papagese:["Pushim pa pagesë",0],bartur:["Pushim i bartur nga viti paraprak",0],kompenzim:["Pushim me kompenzim",0],extra:["Punë extra",0]};
+const SPECIAL=["martese","vdekje","lindje","gjak"],OTHER=["papagese","bartur","kompenzim"],HIDDEN=["bartur","kompenzim"];
+const MENU=[{k:"vjetor"},{k:"mjekesor"},{l:"Raste të veçanta",i:SPECIAL},{k:"papagese"},{k:"extra"}];
 const ini=n=>String(n||"?").trim().split(/\s+/).slice(0,2).map(w=>w[0]||"").join("").toUpperCase();
 const today=()=>{const d=new Date();return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0")};
 const I={
@@ -240,7 +242,7 @@ function shell(inner){
 }
 
 function draw(){
-  const keep={f:$("#from")&&$("#from").value,t:$("#to")&&$("#to").value,d:$("#days")&&$("#days").value,n:$("#note")&&$("#note").value};
+  const keep={f:$("#from")&&$("#from").value,t:$("#to")&&$("#to").value,d:$("#days")&&$("#days").value,n:$("#note")&&$("#note").value,s:$("#shift")&&$("#shift").value};
   const app=$("#app");
   if(recovering&&session)return app.innerHTML=recoverView();
   if(!session)return app.innerHTML=authView();
@@ -250,7 +252,7 @@ function draw(){
   }
   const adm=me.role=="admin";
   app.innerHTML=shell(adm&&tab=="req"?reqView():adm&&tab=="staff"?staffView():adm&&tab=="sched"?schedView(true):meView());
-  if($("#from")){$("#from").value=keep.f||"";$("#to").value=keep.t||"";$("#note").value=keep.n||"";if(keep.d){$("#days").value=keep.d;calc(1)}else calc()}
+  if($("#from")){$("#from").value=keep.f||"";$("#to").value=keep.t||"";$("#note").value=keep.n||"";$("#shift").value=keep.s||"";if(keep.d){$("#days").value=keep.d;calc(1)}else calc()}
 }
 const go=t=>{tab=t;menu=false;sedit=null;draw()};
 
@@ -304,24 +306,24 @@ const out=()=>sb.auth.signOut();
 function entry(e,del){
   const med=e.leave_type=="mjekesor";
   const badge=STB[st(e)]+(med?(e.doc_path?'<span class="badge t">Me dëshmi</span>':'<span class="badge t">Pa dëshmi (≤3)</span>'):'');
-  return '<div class="ent"><div class="ico">'+icoFor(e.leave_type)+'</div><div class="txt"><b>'+esc(T[e.leave_type][0])+'</b><div>'+fmt(e.from_date)+' – '+fmt(e.to_date)+' · '+e.days+' ditë</div>'+(e.note?'<div>'+esc(e.note)+'</div>':'')+(e.edited_at?'<div>Ndryshuar nga administratori</div>':'')+(e.admin_comment?'<div class="cmt"><b>Koment nga administratori:</b> '+esc(e.admin_comment)+'</div>':'')+'</div><div class="act">'+badge+(e.doc_path?'<button type="button" class="lnk" style="border:0;background:none;padding:0;font-size:13px" onclick="openDoc(\''+esc(e.doc_path)+'\')">Dëshmia</button>':'')+(del?'<button class="btn sm" onclick="editLeave(\''+e.id+'\')">Ndrysho</button><button class="btn sm'+(armed==e.id?' danger':'')+'" onclick="del(\''+e.id+'\')">'+(armed==e.id?"Konfirmo?":"Fshi")+'</button>':'')+'</div>'+(del&&editing==e.id?editForm(e):'')+'</div>';
+  return '<div class="ent"><div class="ico">'+icoFor(e.leave_type)+'</div><div class="txt"><b>'+esc(T[e.leave_type][0])+(e.shift?' · '+esc(e.shift):'')+'</b><div>'+fmt(e.from_date)+' – '+fmt(e.to_date)+' · '+e.days+' ditë</div>'+(e.note?'<div>'+esc(e.note)+'</div>':'')+(e.edited_at?'<div>Ndryshuar nga administratori</div>':'')+(e.admin_comment?'<div class="cmt"><b>Koment nga administratori:</b> '+esc(e.admin_comment)+'</div>':'')+'</div><div class="act">'+badge+(e.doc_path?'<button type="button" class="lnk" style="border:0;background:none;padding:0;font-size:13px" onclick="openDoc(\''+esc(e.doc_path)+'\')">Dëshmia</button>':'')+(del?'<button class="btn sm" onclick="editLeave(\''+e.id+'\')">Ndrysho</button><button class="btn sm'+(armed==e.id?' danger':'')+'" onclick="del(\''+e.id+'\')">'+(armed==e.id?"Konfirmo?":"Fshi")+'</button>':'')+'</div>'+(del&&editing==e.id?editForm(e):'')+'</div>';
 }
 function menuHtml(){
   let h='<label id="lt">Lloji i pushimit</label><button type="button" aria-labelledby="lt" aria-expanded="'+menu+'" class="sel'+(ltype?"":" ph")+'" onclick="menu=!menu;sub=null;draw()"><span>'+(ltype?esc(T[ltype][0]):"Zgjidhni llojin e pushimit")+'</span>'+I.down+'</button>';
-  if(menu)h+='<div class="menu">'+MENU.map((m,n)=>m.k?'<button type="button" class="mi" onclick="pick(\''+m.k+'\')"><span>'+esc(T[m.k][0])+'</span><span class="mut">'+T[m.k][1]+' ditë</span></button>':'<button type="button" class="mi" onclick="sub=sub===\''+n+'\'?null:\''+n+'\';draw()"><span>'+esc(m.l)+'</span><span>'+(sub===String(n)?"▾":"▸")+'</span></button>'+(sub===String(n)?m.i.map(k=>'<button type="button" class="mi si" onclick="pick(\''+k+'\')"><span>'+esc(T[k][0])+'</span>'+(T[k][1]?'<span class="mut">'+T[k][1]+' ditë</span>':'')+'</button>').join(""):"")).join("")+'</div>';
+  if(menu)h+='<div class="menu">'+MENU.map((m,n)=>m.k?'<button type="button" class="mi" onclick="pick(\''+m.k+'\')"><span>'+esc(T[m.k][0])+'</span>'+(T[m.k][1]?'<span class="mut">'+T[m.k][1]+' ditë</span>':'')+'</button>':'<button type="button" class="mi" onclick="sub=sub===\''+n+'\'?null:\''+n+'\';draw()"><span>'+esc(m.l)+'</span><span>'+(sub===String(n)?"▾":"▸")+'</span></button>'+(sub===String(n)?m.i.map(k=>'<button type="button" class="mi si" onclick="pick(\''+k+'\')"><span>'+esc(T[k][0])+'</span>'+(T[k][1]?'<span class="mut">'+T[k][1]+' ditë</span>':'')+'</button>').join(""):"")).join("")+'</div>';
   return h;
 }
 function pick(k){ltype=k;menu=false;sub=null;flash="";draw()}
 function meView(){
-  const va=used(myAbs,"vjetor"),ha=held(myAbs,"vjetor"),hm=held(myAbs,"mjekesor"),sp=SPECIAL.concat(OTHER).reduce((n,k)=>n+used(myAbs,k),0);
+  const va=used(myAbs,"vjetor"),ha=held(myAbs,"vjetor"),hm=held(myAbs,"mjekesor"),sp=SPECIAL.concat(OTHER).reduce((n,k)=>n+used(myAbs,k),0),ex=used(myAbs,"extra"),hx=held(myAbs,"extra");
   const fr=Math.max(0,Math.min(100,(20-ha)/20*100));
   let h='<div class="card big"><div class="ring" role="img" aria-label="'+(20-ha)+' nga 20 ditë në dispozicion" style="background:conic-gradient(var(--blue) 0 '+fr+'%,var(--tint) '+fr+'% 100%)"><div><b>'+(20-ha)+'</b><span>nga 20</span></div></div><div><h2>Pushimi vjetor</h2><p>'+(20-ha)+' ditë në dispozicion<br>'+va+' të shfrytëzuara'+(ha>va?' · '+(ha-va)+' në pritje':'')+'</p></div></div>';
   if(flash)h+='<div class="info" style="margin-top:0">'+I.info+'<span>'+esc(flash)+'</span></div>';
-  h+='<div class="minis"><div class="mini"><small>Mjekësor në dispozicion</small><b>'+(20-hm)+'<span> / 20</span></b></div><div class="mini"><small>Të tjera</small><b>'+sp+'<span> ditë</span></b></div></div>';
+  h+='<div class="minis m3"><div class="mini"><small>Mjekësor</small><b>'+(20-hm)+'<span> / 20</span></b></div><div class="mini"><small>Të tjera</small><b>'+sp+'<span> ditë</span></b></div><div class="mini"><small>Punë extra</small><b>'+ex+'<span> ditë'+(hx>ex?' (+'+(hx-ex)+')':'')+'</span></b></div></div>';
   h+=mySchedCard();
-  h+='<div class="card"><h2>Raporto pushim</h2>'+menuHtml()+'<div class="row" style="margin-top:12px"><div><label for="from">Prej</label><input type="date" id="from" oninput="calc()"></div><div><label for="to">Deri</label><input type="date" id="to" oninput="calc()"></div><div><label for="days">Ditë</label><input type="number" id="days" min="1" max="20" oninput="calc(1)"></div></div><label for="note">Shënim (opsionale)</label><textarea id="note" rows="2"></textarea><div id="docbox" style="display:none"><div class="warn">'+I.warn+'<span><b>Mbi 3 ditë:</b> ngarkoni dëshminë e mjekut (PDF ose foto).</span></div><label for="file">Dëshmia e mjekut</label><input type="file" id="file" accept="application/pdf,image/*"></div><p class="mut" id="left" style="font-size:13px;margin-top:12px"></p><p class="err" id="err"></p><button class="btn p full" style="margin-top:4px" id="go" onclick="send()">Dërgo</button></div>';
+  h+='<div class="card"><h2>Raporto pushim ose punë extra</h2>'+menuHtml()+'<div class="row" style="margin-top:12px"><div><label for="from">Prej</label><input type="date" id="from" oninput="calc()"></div><div><label for="to">Deri</label><input type="date" id="to" oninput="calc()"></div><div><label for="days">Ditë</label><input type="number" id="days" min="1" max="20" oninput="calc(1)"></div></div><div id="shbox" style="display:none"><label for="shift">Orari i punës extra</label><input id="shift" list="shl2" placeholder="p.sh. 08-16"><datalist id="shl2">'+["07-15","08-16","09-17","10-18","15-23","16-00","23-07"].map(o=>'<option value="'+o+'">').join("")+'</datalist></div><label for="note">Shënim (opsionale)</label><textarea id="note" rows="2"></textarea><div id="docbox" style="display:none"><div class="warn">'+I.warn+'<span><b>Mbi 3 ditë:</b> ngarkoni dëshminë e mjekut (PDF ose foto).</span></div><label for="file">Dëshmia e mjekut</label><input type="file" id="file" accept="application/pdf,image/*"></div><p class="mut" id="left" style="font-size:13px;margin-top:12px"></p><p class="err" id="err"></p><button class="btn p full" style="margin-top:4px" id="go" onclick="send()">Dërgo</button></div>';
   h+='<div class="card"><h2>Historiku</h2>'+(myAbs.length?myAbs.map(e=>entry(e,false)).join(""):'<p class="mut">Nuk ka pushime të regjistruara.</p>')+'</div>';
-  h+='<div class="card"><h2>Gjendja e pushimeve '+Y+'</h2><div class="scroll"><table><tr><th>Lloji i pushimit</th><th>Të lejuara</th><th>Të shfrytëzuara</th><th>Në dispozicion</th></tr>'+Object.keys(T).map(k=>{const a=T[k][1],u=used(myAbs,k),hh=held(myAbs,k);return '<tr><td class="wrapc">'+esc(T[k][0])+'</td><td>'+(a||"—")+'</td><td>'+u+(hh>u?' <span class="mut">(+'+(hh-u)+' në pritje)</span>':'')+'</td><td><b>'+(a?a-hh:"—")+'</b></td></tr>'}).join("")+'</table></div></div>';
+  h+='<div class="card"><h2>Gjendja e pushimeve '+Y+'</h2><div class="scroll"><table><tr><th>Lloji i pushimit</th><th>Të lejuara</th><th>Të shfrytëzuara</th><th>Në dispozicion</th></tr>'+Object.keys(T).filter(k=>!HIDDEN.includes(k)||held(myAbs,k)>0).map(k=>{const a=T[k][1],u=used(myAbs,k),hh=held(myAbs,k);return '<tr><td class="wrapc">'+esc(T[k][0])+'</td><td>'+(a||"—")+'</td><td>'+u+(hh>u?' <span class="mut">(+'+(hh-u)+' në pritje)</span>':'')+'</td><td><b>'+(a?a-hh:"—")+'</b></td></tr>'}).join("")+'</table></div></div>';
   return h;
 }
 const MON=["Janar","Shkurt","Mars","Prill","Maj","Qershor","Korrik","Gusht","Shtator","Tetor","Nëntor","Dhjetor"],WD=["Die","Hën","Mar","Mër","Enj","Pre","Sht"];
@@ -436,7 +438,7 @@ function reqView(){
   const p=profs.filter(x=>x.status=="pending"),la=allAbs.filter(a=>st(a)=="pending");
   const nm=id=>profs.find(x=>x.id==id)||{};
   let h='<div class="card"><div class="hd"><h2>Kërkesa për pushim</h2>'+(la.length?'<span class="badge t">'+la.length+' në pritje</span>':'')+'</div>';
-  h+=la.length?la.map(e=>{const s=nm(e.user_id),med=e.leave_type=="mjekesor";return '<div class="req"><div style="display:flex;gap:12px;align-items:center;min-width:0"><span class="av">'+esc(ini(s.full_name))+'</span><div style="min-width:0"><b>'+esc(s.full_name||"—")+'</b> <span class="mut" style="font-size:13px">· '+esc(s.position||"")+'</span><div style="font-size:14px">'+esc(T[e.leave_type][0])+'</div><div class="mut" style="font-size:13px">'+fmt(e.from_date)+' – '+fmt(e.to_date)+' · <b style="color:var(--tx)">'+e.days+' ditë</b>'+(T[e.leave_type][1]?' · të miratuara këtë vit: '+used(allAbs.filter(a=>a.user_id==e.user_id),e.leave_type)+'/'+T[e.leave_type][1]:'')+'</div>'+(e.note?'<div class="mut" style="font-size:13px">“'+esc(e.note)+'”</div>':'')+(e.doc_path?(true?'<button type="button" class="lnk" style="border:0;background:none;padding:0;font-size:13px" onclick="openDoc(\''+esc(e.doc_path)+'\')">Shiko dëshminë</button>':''):'')+'</div></div><div style="display:flex;gap:8px"><button class="btn p" onclick="setLeave(\''+e.id+'\',\'approved\')">Mirato</button><button class="btn" onclick="setLeave(\''+e.id+'\',\'rejected\')">Refuzo</button><button class="btn ol" onclick="editLeave(\''+e.id+'\')">Ndrysho / Koment</button></div>'+(editing==e.id?editForm(e):'')+'</div>'}).join(""):'<p class="mut">Asnjë kërkesë për pushim në pritje.</p>';
+  h+=la.length?la.map(e=>{const s=nm(e.user_id),med=e.leave_type=="mjekesor";return '<div class="req"><div style="display:flex;gap:12px;align-items:center;min-width:0"><span class="av">'+esc(ini(s.full_name))+'</span><div style="min-width:0"><b>'+esc(s.full_name||"—")+'</b> <span class="mut" style="font-size:13px">· '+esc(s.position||"")+'</span><div style="font-size:14px">'+esc(T[e.leave_type][0])+(e.shift?' · <b>'+esc(e.shift)+'</b>':'')+'</div><div class="mut" style="font-size:13px">'+fmt(e.from_date)+' – '+fmt(e.to_date)+' · <b style="color:var(--tx)">'+e.days+' ditë</b>'+(T[e.leave_type][1]?' · të miratuara këtë vit: '+used(allAbs.filter(a=>a.user_id==e.user_id),e.leave_type)+'/'+T[e.leave_type][1]:'')+'</div>'+(e.note?'<div class="mut" style="font-size:13px">“'+esc(e.note)+'”</div>':'')+(e.doc_path?(true?'<button type="button" class="lnk" style="border:0;background:none;padding:0;font-size:13px" onclick="openDoc(\''+esc(e.doc_path)+'\')">Shiko dëshminë</button>':''):'')+'</div></div><div style="display:flex;gap:8px"><button class="btn p" onclick="setLeave(\''+e.id+'\',\'approved\')">Mirato</button><button class="btn" onclick="setLeave(\''+e.id+'\',\'rejected\')">Refuzo</button><button class="btn ol" onclick="editLeave(\''+e.id+'\')">Ndrysho / Koment</button></div>'+(editing==e.id?editForm(e):'')+'</div>'}).join(""):'<p class="mut">Asnjë kërkesë për pushim në pritje.</p>';
   h+='</div><div class="card"><div class="hd"><h2>Kërkesa për llogari</h2>'+(p.length?'<span class="badge t">'+p.length+' në pritje</span>':'')+'</div>';
   h+=p.length?p.map(x=>'<div class="req"><div style="display:flex;gap:12px;align-items:center"><span class="av">'+esc(ini(x.full_name))+'</span><div><b>'+esc(x.full_name)+'</b><div class="mut" style="font-size:13px">'+esc(x.position)+' · '+new Date(x.created_at).toLocaleDateString("sq")+'</div></div></div><div style="display:flex;gap:8px"><button class="btn p" onclick="setStatus(\''+x.id+'\',\'approved\')">Mirato</button><button class="btn" onclick="setStatus(\''+x.id+'\',\'rejected\')">Refuzo</button></div></div>').join(""):'<p class="mut">Asnjë kërkesë për llogari në pritje.</p>';
   return h+'</div>';
@@ -444,15 +446,15 @@ function reqView(){
 function staffView(){
   const ap=profs.filter(x=>x.status=="approved");
   const pend=profs.filter(x=>x.status=="pending").length+allAbs.filter(a=>st(a)=="pending").length,td=today(),mo=td.slice(0,7);
-  const away=new Set(allAbs.filter(a=>st(a)=="approved"&&a.from_date<=td&&a.to_date>=td).map(a=>a.user_id)).size;
+  const away=new Set(allAbs.filter(a=>st(a)=="approved"&&a.leave_type!="extra"&&a.from_date<=td&&a.to_date>=td).map(a=>a.user_id)).size;
   const medMo=allAbs.filter(a=>st(a)=="approved"&&a.leave_type=="mjekesor"&&a.from_date.slice(0,7)==mo).reduce((s,a)=>s+a.days,0);
   let h='<div class="stats"><div class="mini"><small>Punonjës aktivë</small><b>'+ap.length+'</b></div><div class="mini"><small>Në pushim sot</small><b>'+away+'</b></div><div class="mini"><small>Ditë mjekësore këtë muaj</small><b>'+medMo+'</b></div><button type="button" class="mini hot" onclick="go(\'req\')"><small>Kërkesa në pritje</small><b>'+pend+'</b></button></div>';
   if(!ap.length)return h+'<div class="card mut">Asnjë punonjës i miratuar.</div>';
   const by=id=>allAbs.filter(a=>a.user_id==id);
   const ql=q.trim().toLowerCase(),list=ap.filter(s=>!ql||(s.full_name+" "+s.position).toLowerCase().includes(ql));
   const pm=u=>'<div class="pm"><i><em style="width:'+Math.min(100,u/20*100)+'%"></em></i>'+u+'/20</div>';
-  const rows=list.map(s=>{const e=by(s.id);const oth=Object.keys(T).filter(k=>k!="vjetor"&&k!="mjekesor").reduce((n,k)=>n+used(e,k),0);return '<tr><td><div style="display:flex;align-items:center;gap:10px"><span class="av">'+esc(ini(s.full_name))+'</span><b>'+esc(s.full_name)+'</b></div></td><td class="mut">'+esc(s.position)+'</td><td>'+pm(used(e,"vjetor"))+'</td><td>'+pm(used(e,"mjekesor"))+'</td><td>'+oth+'</td></tr>'}).join("");
-  h+='<div class="card"><div class="hd"><h2>Përmbledhje</h2><div style="display:flex;gap:8px;flex-wrap:wrap"><label class="sr" for="q">Kërko punonjës</label><input id="q" type="search" placeholder="Kërko punonjës" value="'+esc(q)+'" oninput="search(this.value)" style="height:44px;width:220px"><button class="btn ol" onclick="csv()">'+I.dl+'Eksporto CSV</button></div></div><div class="scroll"><table><tr><th>Emri</th><th>Pozita</th><th>Vjetor</th><th>Mjekësor</th><th>Të tjera</th></tr>'+(rows||'<tr><td colspan="5" class="mut">Asnjë rezultat.</td></tr>')+'</table></div></div>';
+  const rows=list.map(s=>{const e=by(s.id);const oth=Object.keys(T).filter(k=>k!="vjetor"&&k!="mjekesor"&&k!="extra").reduce((n,k)=>n+used(e,k),0);return '<tr><td><div style="display:flex;align-items:center;gap:10px"><span class="av">'+esc(ini(s.full_name))+'</span><b>'+esc(s.full_name)+'</b></div></td><td class="mut">'+esc(s.position)+'</td><td>'+pm(used(e,"vjetor"))+'</td><td>'+pm(used(e,"mjekesor"))+'</td><td>'+oth+'</td><td>'+used(e,"extra")+'</td></tr>'}).join("");
+  h+='<div class="card"><div class="hd"><h2>Përmbledhje</h2><div style="display:flex;gap:8px;flex-wrap:wrap"><label class="sr" for="q">Kërko punonjës</label><input id="q" type="search" placeholder="Kërko punonjës" value="'+esc(q)+'" oninput="search(this.value)" style="height:44px;width:220px"><button class="btn ol" onclick="csv()">'+I.dl+'Eksporto CSV</button></div></div><div class="scroll"><table><tr><th>Emri</th><th>Pozita</th><th>Vjetor</th><th>Mjekësor</th><th>Të tjera</th><th>Punë extra</th></tr>'+(rows||'<tr><td colspan="6" class="mut">Asnjë rezultat.</td></tr>')+'</table></div></div>';
   h+=list.map(s=>'<div class="card"><div class="hd"><div style="display:flex;align-items:center;gap:10px"><span class="av">'+esc(ini(s.full_name))+'</span><div><h2 style="margin:0">'+esc(s.full_name)+'</h2><div class="mut" style="font-size:13px">'+esc(s.position)+'</div></div></div></div>'+(by(s.id).length?by(s.id).map(e=>entry(e,true)).join(""):'<span class="mut">Pa pushime.</span>')+'</div>').join("");
   return h;
 }
@@ -462,14 +464,16 @@ function calc(manual){
   if(!manual&&f&&t&&t>=f)$("#days").value=span(f,t);
   const d=+$("#days").value;
   $("#docbox").style.display=(ltype=="mjekesor"&&d>3)?"block":"none";
+  $("#shbox").style.display=ltype=="extra"?"block":"none";
   const a=ltype&&T[ltype][1];
-  $("#left").innerHTML=a?'Ju mbeten <b style="color:var(--tx)">'+(a-held(myAbs,ltype))+' ditë</b> për këtë lloj pushimi në '+Y+'.':'';
+  $("#left").innerHTML=ltype=="extra"?'Puna extra shtohet në orarin tuaj pasi ta miratojë administratori.':a?'Ju mbeten <b style="color:var(--tx)">'+(a-held(myAbs,ltype))+' ditë</b> për këtë lloj pushimi në '+Y+'.':'';
 }
 async function send(){
   const f=$("#from").value,t=$("#to").value,d=+$("#days").value,note=$("#note").value.trim(),file=$("#file")&&$("#file").files[0],er=$("#err");
   er.textContent="";
   if(!ltype){er.textContent="Zgjidhni llojin e pushimit.";return}
-  const a=T[ltype][1],left=a?a-held(myAbs,ltype):1e9,med=ltype=="mjekesor"&&d>3;
+  const a=T[ltype][1],left=a?a-held(myAbs,ltype):1e9,med=ltype=="mjekesor"&&d>3,shift=$("#shift").value.trim();
+  if(ltype=="extra"&&!/^\d{1,2}(:\d{2})?\s*-\s*\d{1,2}(:\d{2})?$/.test(shift)){er.textContent="Shkruani orarin e punës extra, p.sh. 08-16.";return}
   if(!f||!t||t<f||!(d>0)){er.textContent="Zgjidhni datat e sakta.";return}
   if(d>span(f,t)){er.textContent="Ditët nuk mund të jenë më shumë se periudha e zgjedhur.";return}
   if(d>left){er.textContent="Keni vetëm "+left+" ditë në dispozicion për këtë lloj pushimi.";return}
@@ -481,13 +485,14 @@ async function send(){
     const u=await sb.storage.from("documents").upload(path,file,{contentType:file.type});
     if(u.error){er.textContent="Ngarkimi i dëshmisë dështoi: "+u.error.message;$("#go").disabled=false;return}
   }
-  const r=await sb.from("absences").insert({user_id:session.user.id,leave_type:ltype,from_date:f,to_date:t,days:d,note:note||null,doc_path:path});
+  const r=await sb.from("absences").insert({user_id:session.user.id,leave_type:ltype,from_date:f,to_date:t,days:d,note:note||null,doc_path:path,shift:ltype=="extra"?shift.replace(/\s/g,""):null});
   if(r.error){
     if(path)await sb.storage.from("documents").remove([path]);
     er.textContent="Dërgimi dështoi: "+r.error.message;$("#go").disabled=false;return;
   }
-  $("#from").value="";$("#to").value="";$("#days").value="";$("#note").value="";ltype="";
-  flash="Kërkesa u dërgua. Pushimi llogaritet pasi ta miratojë administratori.";
+  const wasExtra=ltype=="extra";
+  $("#from").value="";$("#to").value="";$("#days").value="";$("#note").value="";$("#shift").value="";ltype="";
+  flash=wasExtra?"Puna extra u raportua. Shtohet në orar pasi ta miratojë administratori.":"Kërkesa u dërgua. Pushimi llogaritet pasi ta miratojë administratori.";
   await load();
 }
 async function del(id){
@@ -498,7 +503,7 @@ async function del(id){
 }
 function editForm(e){
   const pend=st(e)=="pending";
-  return '<div class="edit"><div class="row r3"><div><label for="et">Lloji i pushimit</label><select id="et">'+Object.keys(T).map(k=>'<option value="'+k+'"'+(k==e.leave_type?' selected':'')+'>'+esc(T[k][0])+'</option>').join("")+'</select></div><div><label for="ef">Prej</label><input type="date" id="ef" value="'+e.from_date+'" oninput="ecalc()"></div><div><label for="eto">Deri</label><input type="date" id="eto" value="'+e.to_date+'" oninput="ecalc()"></div></div><label for="ed">Ditë</label><input type="number" id="ed" min="1" max="20" value="'+e.days+'" style="max-width:120px"><label for="ec">Koment për punonjësin (opsionale)</label><textarea id="ec" rows="2" maxlength="1000" placeholder="p.sh. Datat u korrigjuan sipas marrëveshjes.">'+esc(e.admin_comment||"")+'</textarea><p class="err" id="eerr"></p><div class="acts">'+(pend?'<button class="btn p" onclick="saveLeave(\''+e.id+'\',\'approved\')">Ruaj dhe mirato</button><button class="btn" onclick="saveLeave(\''+e.id+'\',\'rejected\')">Ruaj dhe refuzo</button><button class="btn ol" onclick="saveLeave(\''+e.id+'\')">Ruaj vetëm ndryshimet</button>':'<button class="btn p" onclick="saveLeave(\''+e.id+'\')">Ruaj ndryshimet</button>')+'<button class="btn" onclick="editing=null;draw()">Anulo</button></div></div>';
+  return '<div class="edit"><div class="row r3"><div><label for="et">Lloji i pushimit</label><select id="et">'+Object.keys(T).filter(k=>!HIDDEN.includes(k)||k==e.leave_type).map(k=>'<option value="'+k+'"'+(k==e.leave_type?' selected':'')+'>'+esc(T[k][0])+'</option>').join("")+'</select></div><div><label for="ef">Prej</label><input type="date" id="ef" value="'+e.from_date+'" oninput="ecalc()"></div><div><label for="eto">Deri</label><input type="date" id="eto" value="'+e.to_date+'" oninput="ecalc()"></div></div><label for="ed">Ditë</label><input type="number" id="ed" min="1" max="20" value="'+e.days+'" style="max-width:120px"><label for="esh">Orari i punës (vetëm për punë extra)</label><input id="esh" value="'+esc(e.shift||"")+'" placeholder="p.sh. 08-16" style="max-width:200px"><label for="ec">Koment për punonjësin (opsionale)</label><textarea id="ec" rows="2" maxlength="1000" placeholder="p.sh. Datat u korrigjuan sipas marrëveshjes.">'+esc(e.admin_comment||"")+'</textarea><p class="err" id="eerr"></p><div class="acts">'+(pend?'<button class="btn p" onclick="saveLeave(\''+e.id+'\',\'approved\')">Ruaj dhe mirato</button><button class="btn" onclick="saveLeave(\''+e.id+'\',\'rejected\')">Ruaj dhe refuzo</button><button class="btn ol" onclick="saveLeave(\''+e.id+'\')">Ruaj vetëm ndryshimet</button>':'<button class="btn p" onclick="saveLeave(\''+e.id+'\')">Ruaj ndryshimet</button>')+'<button class="btn" onclick="editing=null;draw()">Anulo</button></div></div>';
 }
 function editLeave(id){editing=editing==id?null:id;armed=null;draw();const f=$("#ef");if(f)f.scrollIntoView({block:"center",behavior:"smooth"})}
 function ecalc(){const f=$("#ef").value,t=$("#eto").value;if(f&&t&&t>=f)$("#ed").value=span(f,t)}
@@ -506,7 +511,9 @@ async function saveLeave(id,s){
   const lt=$("#et").value,f=$("#ef").value,t=$("#eto").value,d=+$("#ed").value,c=$("#ec").value.trim(),er=$("#eerr");er.textContent="";
   if(!f||!t||t<f||!(d>0)){er.textContent="Zgjidhni datat e sakta.";return}
   if(d>span(f,t)){er.textContent="Ditët nuk mund të jenë më shumë se periudha e zgjedhur.";return}
-  const pl={leave_type:lt,from_date:f,to_date:t,days:d,admin_comment:c||null};if(s)pl.status=s;
+  const sh=$("#esh").value.trim().replace(/\s/g,"");
+  if(lt=="extra"&&!sh){er.textContent="Për punë extra shkruani orarin, p.sh. 08-16.";return}
+  const pl={leave_type:lt,from_date:f,to_date:t,days:d,admin_comment:c||null,shift:lt=="extra"?sh:null};if(s)pl.status=s;
   document.querySelectorAll(".edit button").forEach(b=>b.disabled=true);
   const r=await sb.from("absences").update(pl).eq("id",id);
   if(r.error){document.querySelectorAll(".edit button").forEach(b=>b.disabled=false);er.textContent=/doc_required/.test(r.error.message)?"Pushimi mjekësor mbi 3 ditë kërkon dëshmi të mjekut, të cilën punonjësi nuk e ka ngarkuar.":/Kaluat/.test(r.error.message)?r.error.message:"Ruajtja dështoi: "+r.error.message;return}
@@ -522,8 +529,8 @@ async function openDoc(p){
 }
 function csv(){
   const qq=v=>'"'+String(v==null?"":v).replace(/"/g,'""')+'"';
-  let c="Emri,Pozita,Lloji,Prej,Deri,Ditë,Statusi,Dëshmi,Shënim,Koment i adminit\n";
-  allAbs.forEach(e=>{const s=profs.find(x=>x.id==e.user_id)||{};c+=[s.full_name,s.position,T[e.leave_type][0],e.from_date,e.to_date,e.days,{pending:"Në pritje",approved:"Miratuar",rejected:"Refuzuar"}[st(e)],e.doc_path?"Po":"Jo",e.note,e.admin_comment].map(qq).join(",")+"\n"});
+  let c="Emri,Pozita,Lloji,Prej,Deri,Ditë,Orari,Statusi,Dëshmi,Shënim,Koment i adminit\n";
+  allAbs.forEach(e=>{const s=profs.find(x=>x.id==e.user_id)||{};c+=[s.full_name,s.position,T[e.leave_type][0],e.from_date,e.to_date,e.days,e.shift,{pending:"Në pritje",approved:"Miratuar",rejected:"Refuzuar"}[st(e)],e.doc_path?"Po":"Jo",e.note,e.admin_comment].map(qq).join(",")+"\n"});
   const a=document.createElement("a");a.href=URL.createObjectURL(new Blob(["\ufeff"+c],{type:"text/csv"}));a.download="pushimet-stafit-"+Y+".csv";a.click();
 }
 sb.auth.getSession().then(r=>{if(!r.data.session&&!session)draw()});
