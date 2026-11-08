@@ -517,13 +517,21 @@ function calc(manual){
   const d=+$("#days").value;
   $("#docbox").style.display=(ltype=="mjekesor"&&d>3)?"block":"none";
   $("#shbox").style.display=ltype=="extra"?"block":"none";
-  const a=ltype&&T[ltype][1];
-  $("#left").innerHTML=ltype=="extra"?'Puna extra shtohet në orarin tuaj pasi ta miratojë administratori.':a?'Ju mbeten <b style="color:var(--tx)">'+(a-held(myAbs,ltype,session.user.id))+' ditë</b> për këtë lloj pushimi në '+Y+'.':'';
+  const a=ltype&&T[ltype][1],no=a?noLeft(ltype):"";
+  $("#left").innerHTML=ltype=="extra"?'Puna extra shtohet në orarin tuaj pasi ta miratojë administratori.':no?'<span class="err" style="display:block;margin:0">'+no+'</span>':a?'Ju mbeten <b style="color:var(--tx)">'+(a-held(myAbs,ltype,session.user.id))+' ditë</b> për këtë lloj pushimi në '+Y+'.':'';
+  $("#go").disabled=!!no;
+}
+function noLeft(k){
+  const a=T[k][1],U=session.user.id;if(!a)return "";
+  if(used(myAbs,k,U)>=a)return k=="vjetor"?"Ditët e pushimit vjetor tashmë janë shfrytëzuar.":"Ditët për "+T[k][0].toLowerCase()+" tashmë janë shfrytëzuar.";
+  if(held(myAbs,k,U)>=a)return "Ditët e mbetura janë të rezervuara nga kërkesat që presin miratimin.";
+  return "";
 }
 async function send(){
   const f=$("#from").value,t=$("#to").value,d=+$("#days").value,note=$("#note").value.trim(),file=$("#file")&&$("#file").files[0],er=$("#err");
   er.textContent="";
   if(!ltype){er.textContent="Zgjidhni llojin e pushimit.";return}
+  const no=noLeft(ltype);if(no){er.textContent=no;return}
   const a=T[ltype][1],left=a?a-held(myAbs,ltype,session.user.id):1e9,med=ltype=="mjekesor"&&d>3,shift=$("#shift").value.trim();
   if(ltype=="extra"&&!/^\d{1,2}(:\d{2})?\s*-\s*\d{1,2}(:\d{2})?$/.test(shift)){er.textContent="Shkruani orarin e punës extra, p.sh. 08-16.";return}
   if(!f||!t||t<f||!(d>0)){er.textContent="Zgjidhni datat e sakta.";return}
