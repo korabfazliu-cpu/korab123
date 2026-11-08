@@ -135,6 +135,35 @@ td.wrapc{white-space:normal}
 .pm i em{display:block;height:100%;background:var(--blue)}
 .req{border:1px solid #EEF1F6;border-radius:18px;padding:14px;display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;margin-top:10px}
 .sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
+.sg{overflow-x:auto;margin:0 -18px;padding:0 18px}
+table.sgt{border-collapse:separate;border-spacing:3px;font-size:12px;width:auto}
+.sgt th,.sgt td{padding:0;border:0;white-space:nowrap;text-align:center;background:none}
+.sgt th{font-size:11px;font-weight:700;color:var(--mut);letter-spacing:0;text-transform:none;padding:4px 2px}
+.sgt td,.sgt th{width:58px;min-width:58px;max-width:58px}
+.sgt th.nm,.sgt td.nm{position:sticky;left:0;z-index:1;background:#fff;text-align:left;padding:6px 10px 6px 0;width:140px;min-width:140px;max-width:140px;overflow:hidden;text-overflow:ellipsis;font-size:13px;font-weight:600;color:var(--tx)}
+.sgt th.today{background:var(--blue);color:#fff;border-radius:10px}
+.sgt th small{display:block;font-weight:600;opacity:.8}
+.sc{display:block;width:100%;height:30px;line-height:30px;border:0;border-radius:8px;font:inherit;font-size:12px;font-weight:700;padding:0 4px;overflow:hidden;text-overflow:ellipsis}
+button.sc{cursor:pointer}button.sc:hover{outline:2px solid var(--blue);outline-offset:1px}
+.sc.on{outline:2px solid var(--navy);outline-offset:1px}
+.sm{background:#E8EEFF;color:#0038D6}.sa{background:#FFF0CC;color:#7A4A00}.sn{background:#00246A;color:#fff}.so{background:#EEF1F6;color:#5F656B}.sl{background:#E3F5EA;color:#11602F}.sx{background:#F3E8FF;color:#5B21B6}.se{background:transparent;color:#C3CAD5}
+.chip{display:block;margin:2px 0;padding:3px 4px;border-radius:8px;font-size:10px;font-weight:700;white-space:normal;line-height:1.25}
+.legend{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px;font-size:12px}
+.legend span{padding:3px 10px;border-radius:10px;font-weight:600}
+.mnav{display:flex;align-items:center;gap:6px}
+.mnav b{min-width:130px;text-align:center}
+.days7{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:6px}
+.days7>div{border-radius:14px;padding:8px 4px;text-align:center;background:#F7F9FC}
+.days7>div.td{background:var(--tint);outline:2px solid var(--blue)}
+.days7 small{display:block;font-size:11px;color:var(--mut);font-weight:600}
+.days7 b{display:block;font-size:13px;margin-bottom:4px}
+.days7 .sc{height:auto;line-height:1.2;padding:5px 2px;white-space:normal;font-size:11px}
+.ebar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;background:var(--tint);border-radius:16px;padding:10px 12px;margin-bottom:12px}
+.ebar input{width:140px;height:40px;background:#fff}
+.lk{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:10px 0;border-top:1px solid #EEF1F6;flex-wrap:wrap}
+.lk:first-of-type{border-top:0}
+.lk select{width:auto;min-width:220px;height:42px}
+@media (max-width:480px){.days7{grid-template-columns:repeat(4,minmax(0,1fr))}.lk select{width:100%}}
 @media (max-width:480px){.row{grid-template-columns:minmax(0,1fr) minmax(0,1fr)}.row>div:last-child{grid-column:1/-1}.row.r3{grid-template-columns:1fr}.ap h1{font-size:28px}.ent .act{width:100%;justify-content:flex-start;padding-left:52px}.ent .act:empty{display:none}}
 </style>
 </head>
@@ -176,7 +205,7 @@ const logoBlock=h=>'<span class="logo"><img src="'+LOGO+'" alt="038 Parking Cent
 const FOOT='<p class="foot">© 038 Parking Center · Prishtinë</p>';
 const CIRC=n=>Array.from({length:n},(_,i)=>'<span class="circ c'+(i+1)+'" aria-hidden="true"></span>').join("");
 const authPage=(card,below)=>'<div class="ap">'+CIRC(3)+'<div class="apin">'+logoBlock(56)+'<h1 style="margin-top:34px">Digital HR</h1><div class="card">'+card+'</div>'+(below||'')+'<p class="foot">© 038 Parking Center · Prishtinë</p></div></div>';
-let ltype="",menu=false,sub=null,session=null,me=null,mode="in",tab="me",myAbs=[],profs=[],allAbs=[],armed=null,msg="",q="",flash="",recovering=false,editing=null;
+let ltype="",menu=false,sub=null,session=null,me=null,mode="in",tab="me",myAbs=[],profs=[],allAbs=[],armed=null,msg="",q="",flash="",recovering=false,editing=null,sched={people:[],entries:[]},smonth=today().slice(0,7),sedit=null,imp=null,showSec=false;
 
 sb.auth.onAuthStateChange((ev,s)=>{
   if(ev=="TOKEN_REFRESHED")return;
@@ -197,6 +226,7 @@ async function load(){
       profs=p.data||[];allAbs=b.data||[];
       if(tab=="me"&&!window.__adminSeen){tab=profs.some(x=>x.status=="pending")?"req":"staff";window.__adminSeen=1}
     }
+    await loadSched();
   }
   draw();
 }
@@ -205,7 +235,7 @@ function shell(inner){
   const adm=me.role=="admin",pend=profs.filter(x=>x.status=="pending").length+allAbs.filter(a=>st(a)=="pending").length;
   let h='<header class="nhead">'+CIRC(2)+'<div class="wrap"><div class="hrow">'+logoBlock(36)+'<button class="icon-btn" onclick="out()" aria-label="Dil" title="Dil">'+I.out+'</button></div>';
   h+='<div class="who"><p>Mirë se vini,</p><h1>'+esc(me.full_name)+'</h1><p>'+esc(me.position)+' · Kuleta digjitale personale</p></div>';
-  if(adm)h+='<nav class="tabs" aria-label="Seksionet"><button class="'+(tab=="req"?"on":"")+'" onclick="go(\'req\')">Kërkesat'+(pend?' <span class="cnt">'+pend+'</span>':'')+'</button><button class="'+(tab=="staff"?"on":"")+'" onclick="go(\'staff\')">Stafi</button><button class="'+(tab=="me"?"on":"")+'" onclick="go(\'me\')">Pushimet e mia</button></nav>';
+  if(adm)h+='<nav class="tabs" aria-label="Seksionet"><button class="'+(tab=="req"?"on":"")+'" onclick="go(\'req\')">Kërkesat'+(pend?' <span class="cnt">'+pend+'</span>':'')+'</button><button class="'+(tab=="staff"?"on":"")+'" onclick="go(\'staff\')">Stafi</button><button class="'+(tab=="sched"?"on":"")+'" onclick="go(\'sched\')">Orari</button><button class="'+(tab=="me"?"on":"")+'" onclick="go(\'me\')">Pushimet e mia</button></nav>';
   return h+'</div></header><main class="wrap">'+inner+'</main>'+FOOT;
 }
 
@@ -219,10 +249,10 @@ function draw(){
     return app.innerHTML=authPage('<h2>'+(me.status=="pending"?"Llogaria pret miratimin":"Llogaria u refuzua")+'</h2><p class="mut">'+(me.status=="pending"?"Administratori duhet ta miratojë llogarinë tuaj para se të hyni. Kthehuni më vonë.":"Administratori nuk e miratoi këtë llogari. Kontaktoni menaxherin.")+'</p><div style="display:flex;gap:8px;margin-top:18px"><button class="btn p" onclick="load()">Rifresko</button><button class="btn" onclick="out()">Dil</button></div>');
   }
   const adm=me.role=="admin";
-  app.innerHTML=shell(adm&&tab=="req"?reqView():adm&&tab=="staff"?staffView():meView());
+  app.innerHTML=shell(adm&&tab=="req"?reqView():adm&&tab=="staff"?staffView():adm&&tab=="sched"?schedView(true):meView());
   if($("#from")){$("#from").value=keep.f||"";$("#to").value=keep.t||"";$("#note").value=keep.n||"";if(keep.d){$("#days").value=keep.d;calc(1)}else calc()}
 }
-const go=t=>{tab=t;menu=false;draw()};
+const go=t=>{tab=t;menu=false;sedit=null;draw()};
 
 function authView(){
   const su=mode=="up",fg=mode=="forgot",ent=' onkeydown="if(event.key==\'Enter\')$(\'#sub\').click()"';
@@ -288,10 +318,119 @@ function meView(){
   let h='<div class="card big"><div class="ring" role="img" aria-label="'+(20-ha)+' nga 20 ditë në dispozicion" style="background:conic-gradient(var(--blue) 0 '+fr+'%,var(--tint) '+fr+'% 100%)"><div><b>'+(20-ha)+'</b><span>nga 20</span></div></div><div><h2>Pushimi vjetor</h2><p>'+(20-ha)+' ditë në dispozicion<br>'+va+' të shfrytëzuara'+(ha>va?' · '+(ha-va)+' në pritje':'')+'</p></div></div>';
   if(flash)h+='<div class="info" style="margin-top:0">'+I.info+'<span>'+esc(flash)+'</span></div>';
   h+='<div class="minis"><div class="mini"><small>Mjekësor në dispozicion</small><b>'+(20-hm)+'<span> / 20</span></b></div><div class="mini"><small>Të tjera</small><b>'+sp+'<span> ditë</span></b></div></div>';
+  h+=mySchedCard();
   h+='<div class="card"><h2>Raporto pushim</h2>'+menuHtml()+'<div class="row" style="margin-top:12px"><div><label for="from">Prej</label><input type="date" id="from" oninput="calc()"></div><div><label for="to">Deri</label><input type="date" id="to" oninput="calc()"></div><div><label for="days">Ditë</label><input type="number" id="days" min="1" max="20" oninput="calc(1)"></div></div><label for="note">Shënim (opsionale)</label><textarea id="note" rows="2"></textarea><div id="docbox" style="display:none"><div class="warn">'+I.warn+'<span><b>Mbi 3 ditë:</b> ngarkoni dëshminë e mjekut (PDF ose foto).</span></div><label for="file">Dëshmia e mjekut</label><input type="file" id="file" accept="application/pdf,image/*"></div><p class="mut" id="left" style="font-size:13px;margin-top:12px"></p><p class="err" id="err"></p><button class="btn p full" style="margin-top:4px" id="go" onclick="send()">Dërgo</button></div>';
   h+='<div class="card"><h2>Historiku</h2>'+(myAbs.length?myAbs.map(e=>entry(e,false)).join(""):'<p class="mut">Nuk ka pushime të regjistruara.</p>')+'</div>';
   h+='<div class="card"><h2>Gjendja e pushimeve '+Y+'</h2><div class="scroll"><table><tr><th>Lloji i pushimit</th><th>Të lejuara</th><th>Të shfrytëzuara</th><th>Në dispozicion</th></tr>'+Object.keys(T).map(k=>{const a=T[k][1],u=used(myAbs,k),hh=held(myAbs,k);return '<tr><td class="wrapc">'+esc(T[k][0])+'</td><td>'+(a||"—")+'</td><td>'+u+(hh>u?' <span class="mut">(+'+(hh-u)+' në pritje)</span>':'')+'</td><td><b>'+(a?a-hh:"—")+'</b></td></tr>'}).join("")+'</table></div></div>';
   return h;
+}
+const MON=["Janar","Shkurt","Mars","Prill","Maj","Qershor","Korrik","Gusht","Shtator","Tetor","Nëntor","Dhjetor"],WD=["Die","Hën","Mar","Mër","Enj","Pre","Sht"];
+const ds=d=>d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0");
+const addD=(s,n)=>{const d=new Date(s+"T12:00:00");d.setDate(d.getDate()+n);return ds(d)};
+const mDays=ym=>{const [y,m]=ym.split("-").map(Number),n=new Date(y,m,0).getDate();return Array.from({length:n},(_,i)=>ym+"-"+String(i+1).padStart(2,"0"))};
+const wd=s=>WD[new Date(s+"T12:00:00").getDay()];
+const mLabel=ym=>MON[+ym.slice(5)-1]+" "+ym.slice(0,4);
+const sCls=v=>{const t=String(v||"").toLowerCase().trim();if(!t)return"se";if(t.includes("vjetor")||t.includes("mjek"))return"sl";if(t.startsWith("pushim"))return"so";const m=t.match(/^(\d{1,2})\s*[-–:]/);if(!m)return"sx";const h=+m[1];return h>=5&&h<12?"sm":h>=12&&h<20?"sa":"sn"};
+const sTxt=v=>{const c=sCls(v);return c=="sl"?(String(v).toLowerCase().includes("mjek")?"Mjekësor":"Vjetor"):v};
+const pName=id=>(sched.people.find(x=>x.id==id)||{}).name||"";
+async function loadSched(){
+  const days=mDays(smonth),t=today(),t7=addD(t,7),lo=days[0]<t?days[0]:t,hi=days[days.length-1]>t7?days[days.length-1]:t7;
+  try{const [p,e]=await Promise.all([sb.from("schedule_people").select("*").order("name"),sb.from("schedule_entries").select("*").gte("day",lo).lte("day",hi)]);
+  sched={people:p.data||[],entries:e.data||[]}}catch(err){sched={people:[],entries:[]}}
+}
+async function shiftMonth(n){const [y,m]=smonth.split("-").map(Number),d=new Date(y,m-1+n,1);smonth=d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0");sedit=null;await loadSched();draw()}
+function schedGrid(admin){
+  const days=mDays(smonth),t=today(),es=sched.entries.filter(e=>e.day.slice(0,7)==smonth);
+  const depts=[...new Set(es.map(e=>e.dept))].sort();
+  if(!depts.length)return '<div class="card"><p class="mut">'+(admin?"Nuk ka orar për "+mLabel(smonth)+". Ngarkoni Excel-in e muajit.":"Nuk ka orar për "+mLabel(smonth)+".")+'</p></div>';
+  const head='<tr><th class="nm"></th>'+days.map(x=>'<th class="'+(x==t?"today":"")+'">'+(+x.slice(8))+'<small>'+wd(x)+'</small></th>').join("")+'</tr>';
+  return depts.map(dp=>{
+    const ids=[...new Set(es.filter(e=>e.dept==dp&&!e.is_extra).map(e=>e.person_id))].sort((a,b)=>pName(a).localeCompare(pName(b)));
+    const cell=(pid,x)=>{const e=es.find(z=>z.dept==dp&&!z.is_extra&&z.person_id==pid&&z.day==x),v=e?e.value:"",on=sedit&&sedit.dept==dp&&sedit.pid==pid&&sedit.day==x;
+      return '<td>'+(admin?'<button type="button" class="sc '+sCls(v)+(on?" on":"")+'" title="'+esc(pName(pid)+" · "+fmt(x))+'" onclick="sOpen(\''+esc(dp)+'\',\''+pid+'\',\''+x+'\')">'+(v?esc(sTxt(v)):"·")+'</button>':'<span class="sc '+sCls(v)+'" title="'+esc(v)+'">'+(v?esc(sTxt(v)):"·")+'</span>')+'</td>'};
+    let rows=ids.map(pid=>'<tr><td class="nm">'+esc(pName(pid))+'</td>'+days.map(x=>cell(pid,x)).join("")+'</tr>').join("");
+    const ex=es.filter(e=>e.dept==dp&&e.is_extra);
+    if(ex.length)rows+='<tr><td class="nm mut">Extra</td>'+days.map(x=>'<td>'+ex.filter(e=>e.day==x).map(e=>'<span class="chip '+sCls(e.value)+'">'+esc((e.person_id?pName(e.person_id).split(" ")[0]:e.person_label)+" "+e.value)+'</span>').join("<br>")+'</td>').join("")+'</tr>';
+    let eb="";
+    if(admin&&sedit&&sedit.dept==dp)eb='<div class="ebar"><b>'+esc(pName(sedit.pid))+'</b><span class="mut">'+wd(sedit.day)+" "+fmt(sedit.day)+'</span><label class="sr" for="sv">Ndërrimi</label><input id="sv" list="shl" value="'+esc(sedit.value)+'" placeholder="p.sh. 08-16" onkeydown="if(event.key==\'Enter\')sSave()"><datalist id="shl">'+["07-15","08-16","09-17","10-18","15-23","16-00","23-07","Pushim","PUSHIM VJETOR"].map(o=>'<option value="'+o+'">').join("")+'</datalist><button class="btn p sm" onclick="sSave()">Ruaj</button>'+(sedit.id?'<button class="btn sm" onclick="sSave(1)">Fshi</button>':'')+'<button class="btn sm" onclick="sedit=null;draw()">Anulo</button><span class="err" id="serr" style="margin:0"></span></div>';
+    return '<div class="card"><h2>'+esc(dp)+'</h2>'+eb+'<div class="sg"><table class="sgt">'+head+rows+'</table></div></div>';
+  }).join("")+'<div class="legend"><span class="sm">Paradite</span><span class="sa">Pasdite</span><span class="sn">Natë</span><span class="so">Pushim</span><span class="sl">Pushim vjetor</span></div>';
+}
+function schedView(admin){
+  let h='<div class="card"><div class="hd"><div class="mnav"><button class="btn sm" aria-label="Muaji paraprak" onclick="shiftMonth(-1)">‹</button><b>'+mLabel(smonth)+'</b><button class="btn sm" aria-label="Muaji tjetër" onclick="shiftMonth(1)">›</button></div>'+(admin?'<div style="display:flex;gap:8px;flex-wrap:wrap"><label class="btn p" style="margin:0;color:#fff;cursor:pointer">'+I.dl.replace('d="M7 10l5 5 5-5M12 15V3"','d="M17 8l-5-5-5 5M12 3v12"')+'Ngarko Excel<input type="file" accept=".xlsx,.xls" style="display:none" onchange="xlsPick(this)"></label></div>':'')+'</div>'+(admin?'<p class="mut" style="font-size:13px">Klikoni një qelizë për ta ndryshuar ndërrimin. Excel-i duhet të ketë të njëjtin format: kolona "Emri", datat në rreshtin e parë dhe seksionet (Cashier, Mirembajtje, Park…) si rreshta të bashkuar.</p>':'')+'</div>';
+  if(admin&&imp)h+=impCard();
+  h+=schedGrid(admin);
+  if(admin)h+=linkCard();
+  return h;
+}
+function mySchedCard(){
+  const me2=sched.people.find(p=>p.user_id==session.user.id);
+  if(!me2)return '<div class="card"><h2>Orari im</h2><p class="mut" style="font-size:14px">Orari juaj ende nuk është lidhur me llogarinë. Administratori do ta lidhë së shpejti.</p></div>';
+  const t=today(),d7=Array.from({length:7},(_,i)=>addD(t,i));
+  const mine=x=>sched.entries.filter(e=>e.day==x&&e.person_id==me2.id);
+  let h='<div class="card"><div class="hd"><h2>Orari im</h2><button class="btn sm" onclick="showSec=!showSec;draw()">'+(showSec?"Mbyll orarin e seksionit":"Orari i seksionit")+'</button></div><div class="days7">'+d7.map(x=>{const m=mine(x);return '<div class="'+(x==t?"td":"")+'"><small>'+(x==t?"Sot":wd(x))+'</small><b>'+(+x.slice(8))+'.'+x.slice(5,7)+'</b>'+(m.length?m.map(e=>'<span class="sc '+sCls(e.value)+'">'+esc(sTxt(e.value))+(e.is_extra?" (extra)":"")+'</span>').join(""):'<span class="sc se">—</span>')+'</div>'}).join("")+'</div></div>';
+  if(showSec)h=h.replace('<div class="days7">','<div class="days7">')+'<div class="mnav" style="justify-content:center"><button class="btn sm" aria-label="Muaji paraprak" onclick="shiftMonth(-1)">‹</button><b>'+mLabel(smonth)+'</b><button class="btn sm" aria-label="Muaji tjetër" onclick="shiftMonth(1)">›</button></div>'+schedGrid(false);
+  return h;
+}
+function sOpen(dp,pid,x){const e=sched.entries.find(z=>z.dept==dp&&!z.is_extra&&z.person_id==pid&&z.day==x);sedit={dept:dp,pid:pid,day:x,id:e?e.id:null,value:e?e.value:""};draw();const i=$("#sv");if(i){i.focus();i.select()}}
+async function sSave(del){
+  const v=del?"":$("#sv").value.trim(),er=$("#serr");let r;
+  if(sedit.id&&!v)r=await sb.from("schedule_entries").delete().eq("id",sedit.id);
+  else if(sedit.id)r=await sb.from("schedule_entries").update({value:v}).eq("id",sedit.id);
+  else if(v)r=await sb.from("schedule_entries").insert({day:sedit.day,dept:sedit.dept,person_id:sedit.pid,value:v});
+  else{sedit=null;return draw()}
+  if(r&&r.error){er.textContent=r.error.message;return}
+  sedit=null;await loadSched();draw();
+}
+function linkCard(){
+  const ap=profs.filter(x=>x.status=="approved");
+  if(!sched.people.length)return "";
+  return '<div class="card"><h2>Lidhja e orarit me llogaritë</h2><p class="mut" style="font-size:13px;margin:-6px 0 8px">Lidhni çdo emër në orar me llogarinë e punonjësit, që ta shohë orarin e vet.</p>'+sched.people.map(p=>'<div class="lk"><div><b>'+esc(p.name)+'</b>'+(p.user_id?'':' <span class="badge w">Pa lidhje</span>')+'</div><label class="sr" for="lk'+p.id+'">Llogaria për '+esc(p.name)+'</label><select id="lk'+p.id+'" onchange="linkP(\''+p.id+'\',this.value)"><option value="">— Pa lidhje —</option>'+ap.map(a=>'<option value="'+a.id+'"'+(a.id==p.user_id?" selected":"")+'>'+esc(a.full_name+" · "+a.position)+'</option>').join("")+'</select></div>').join("")+'</div>';
+}
+async function linkP(id,uid){const r=await sb.from("schedule_people").update({user_id:uid||null}).eq("id",id);if(r.error)alert(/duplicate|unique/i.test(r.error.message)?"Kjo llogari është lidhur tashmë me një emër tjetër.":r.error.message);await loadSched();draw()}
+function loadXLSX(){return window.XLSX?Promise.resolve():new Promise((ok,no)=>{const s=document.createElement("script");s.src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js";s.onload=ok;s.onerror=()=>no(new Error("Leximi i Excel-it nuk u ngarkua."));document.head.appendChild(s)})}
+const serial=n=>{const d=new Date(Math.round((n-25569)*864e5));return d.getUTCFullYear()+"-"+String(d.getUTCMonth()+1).padStart(2,"0")+"-"+String(d.getUTCDate()).padStart(2,"0")};
+function parseDay(v){if(typeof v=="number"&&v>20000&&v<80000)return serial(v);if(v instanceof Date)return ds(v);const m=String(v||"").trim().match(/^(\d{1,2})[./-](\d{1,2})[./-](\d{4})$/);return m?m[3]+"-"+m[2].padStart(2,"0")+"-"+m[1].padStart(2,"0"):null}
+function parseSheet(wb){
+  const ws=wb.Sheets[wb.SheetNames[0]],g=XLSX.utils.sheet_to_json(ws,{header:1,raw:true,defval:null}),deptRows=new Set();
+  (ws["!merges"]||[]).forEach(m=>{const v=(g[m.s.r]||[])[m.s.c];if(m.s.c==0&&m.e.c-m.s.c>=10)deptRows.add(m.s.r);for(let r=m.s.r;r<=m.e.r;r++){g[r]=g[r]||[];for(let c=m.s.c;c<=m.e.c;c++)g[r][c]=v}});
+  const hr=g.findIndex(r=>r&&String(r[0]||"").trim().toLowerCase()=="emri");
+  if(hr<0)throw new Error("Nuk u gjet rreshti me \"Emri\" dhe datat.");
+  const cols=[];(g[hr]||[]).forEach((v,j)=>{if(j>0){const x=parseDay(v);if(x)cols.push([j,x])}});
+  if(!cols.length)throw new Error("Nuk u gjetën datat në rreshtin e titullit.");
+  const people=new Map(),entries=[],extraRaw=[];let dept="Pa seksion";
+  for(let i=hr+1;i<g.length;i++){const r=g[i]||[],nm=String(r[0]||"").trim();if(!nm)continue;
+    if(deptRows.has(i)){dept=nm;continue}
+    if(nm.toLowerCase()=="extra"){cols.forEach(([j,x])=>{const v=r[j];if(v!=null&&String(v).trim())extraRaw.push([x,dept,String(v).trim()])});continue}
+    people.set(nm,1);cols.forEach(([j,x])=>{const v=r[j];if(v!=null&&String(v).trim())entries.push({day:x,dept,name:nm,value:String(v).trim()})})}
+  const names=[...people.keys()];
+  const match=n=>{const l=n.toLowerCase(),ex=names.filter(p=>p.toLowerCase()==l);if(ex.length)return ex[0];const c=names.filter(p=>p.toLowerCase().split(/\s+/).includes(l));return c.length==1?c[0]:null};
+  const extras=extraRaw.map(([x,dp,t])=>{const m=t.match(/^(.*?)\s+(\d{1,2}\s*-\s*\d{1,2}\*?)$/),n=m?m[1].trim():t;return {day:x,dept:dp,name:match(n),label:n,value:m?m[2].replace(/\s/g,""):t}});
+  const months=[...new Set(cols.map(c=>c[1].slice(0,7)))];
+  return {names,entries,extras,months,from:cols[0][1],to:cols[cols.length-1][1]};
+}
+async function xlsPick(inp){
+  const f=inp.files[0];inp.value="";if(!f)return;
+  try{await loadXLSX();const buf=await f.arrayBuffer();imp=parseSheet(XLSX.read(buf,{type:"array"}));imp.file=f.name;smonth=imp.months[0];await loadSched()}
+  catch(e){imp={error:e.message||String(e)}}
+  draw();
+}
+function impCard(){
+  if(imp.error)return '<div class="card"><h2>Importi i Excel-it</h2><p class="err">'+esc(imp.error)+'</p><button class="btn" onclick="imp=null;draw()">Mbyll</button></div>';
+  const un=[...new Set(imp.extras.filter(e=>!e.name).map(e=>e.label))],known=new Set(sched.people.map(p=>p.name.toLowerCase())),nw=imp.names.filter(n=>!known.has(n.toLowerCase()));
+  return '<div class="card" style="outline:2px solid var(--blue)"><h2>Kontrolloni importin · '+esc(imp.file)+'</h2><p style="font-size:14px">Periudha: <b>'+fmt(imp.from)+' – '+fmt(imp.to)+'</b> · <b>'+imp.names.length+'</b> persona · <b>'+imp.entries.length+'</b> ndërrime · <b>'+imp.extras.length+'</b> ndërrime extra</p>'+(nw.length?'<p class="mut" style="font-size:13px;margin-top:6px">Emra të rinj në orar: '+esc(nw.join(", "))+'</p>':'')+(un.length?'<p class="mut" style="font-size:13px;margin-top:6px">Extra me emra që nuk janë në listë (do të shfaqen ashtu siç janë shkruar): '+esc(un.join(", "))+'</p>':'')+'<div class="warn">'+I.warn+'<span>Orari ekzistues për këtë periudhë do të zëvendësohet me këtë Excel.</span></div><p class="err" id="ierr"></p><div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn p" id="igo" onclick="doImport()">Konfirmo importin</button><button class="btn" onclick="imp=null;draw()">Anulo</button></div></div>';
+}
+async function doImport(){
+  const er=$("#ierr"),b=$("#igo");b.disabled=true;er.textContent="";
+  try{
+    const up=await sb.from("schedule_people").upsert(imp.names.map(n=>({name:n})),{onConflict:"name",ignoreDuplicates:true});if(up.error)throw up.error;
+    const pr=await sb.from("schedule_people").select("*");if(pr.error)throw pr.error;
+    const id=Object.fromEntries(pr.data.map(p=>[p.name,p.id]));
+    const del=await sb.from("schedule_entries").delete().gte("day",imp.from).lte("day",imp.to);if(del.error)throw del.error;
+    const rows=imp.entries.map(e=>({day:e.day,dept:e.dept,person_id:id[e.name],value:e.value})).concat(imp.extras.map(e=>({day:e.day,dept:e.dept,person_id:e.name?id[e.name]:null,person_label:e.label,value:e.value,is_extra:true})));
+    for(let i=0;i<rows.length;i+=500){const r=await sb.from("schedule_entries").insert(rows.slice(i,i+500));if(r.error)throw r.error}
+    imp=null;await loadSched();draw();
+  }catch(e){b.disabled=false;er.textContent="Importi dështoi: "+(e.message||e)}
 }
 function reqView(){
   const p=profs.filter(x=>x.status=="pending"),la=allAbs.filter(a=>st(a)=="pending");
