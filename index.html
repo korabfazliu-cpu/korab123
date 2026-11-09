@@ -63,6 +63,9 @@ main.wrap{position:relative;margin-top:-64px;padding-bottom:20px;display:flex;fl
 /* cards */
 .card{background:var(--card);border:0;border-radius:20px;padding:18px;box-shadow:0 4px 14px rgba(0,36,106,.06)}
 .card h2{font-size:16px;font-weight:700;margin-bottom:12px}
+.tog{display:flex;width:100%;justify-content:space-between;align-items:center;gap:12px;background:none;border:0;padding:0;font:inherit;color:inherit;cursor:pointer;text-align:left}
+.tog h2{margin:0}.tog .chev{width:30px;height:30px;border-radius:50%;background:var(--bg,#eef1f7);display:grid;place-items:center;transition:transform .2s;flex:none}
+.tog .chev svg{width:16px;height:16px}.tog[aria-expanded=true] .chev{transform:rotate(180deg)}.tog[aria-expanded=true]{margin-bottom:12px}
 .hd{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:12px}
 .hd h2{margin:0}
 .big{display:flex;gap:18px;align-items:center;border-radius:24px;padding:20px;box-shadow:0 14px 32px rgba(0,36,106,.14)}
@@ -208,7 +211,7 @@ const logoBlock=h=>'<span class="logo"><img src="'+LOGO+'" alt="038 Parking Cent
 const FOOT='<p class="foot">© 038 Parking Center · Prishtinë</p>';
 const CIRC=n=>Array.from({length:n},(_,i)=>'<span class="circ c'+(i+1)+'" aria-hidden="true"></span>').join("");
 const authPage=(card,below)=>'<div class="ap">'+CIRC(3)+'<div class="apin">'+logoBlock(56)+'<h1 style="margin-top:34px">Digital HR</h1><div class="card">'+card+'</div>'+(below||'')+'<p class="foot">© 038 Parking Center · Prishtinë</p></div></div>';
-let ltype="",menu=false,sub=null,session=null,me=null,mode="in",tab="me",myAbs=[],profs=[],allAbs=[],armed=null,msg="",q="",flash="",recovering=false,editing=null,opening=[],limp=null,sched={people:[],entries:[]},smonth=today().slice(0,7),sedit=null,imp=null,showSec=false;
+let openS={hist:false,bal:false},ltype="",menu=false,sub=null,session=null,me=null,mode="in",tab="me",myAbs=[],profs=[],allAbs=[],armed=null,msg="",q="",flash="",recovering=false,editing=null,opening=[],limp=null,sched={people:[],entries:[]},smonth=today().slice(0,7),sedit=null,imp=null,showSec=false;
 
 sb.auth.onAuthStateChange((ev,s)=>{
   if(ev=="TOKEN_REFRESHED")return;
@@ -315,6 +318,7 @@ function menuHtml(){
   return h;
 }
 function pick(k){ltype=k;menu=false;sub=null;flash="";draw()}
+const togH=(k,t,n)=>'<button class="tog" aria-expanded="'+openS[k]+'" onclick="openS.'+k+'=!openS.'+k+';draw()"><h2>'+t+(n!=null?' <span class="mut" style="font-weight:500;font-size:14px">('+n+')</span>':'')+'</h2><span class="chev"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg></span></button>';
 function meView(){
   const U=session.user.id;
   const va=used(myAbs,"vjetor",U),ha=held(myAbs,"vjetor",U),hm=held(myAbs,"mjekesor",U),sp=SPECIAL.concat(OTHER).reduce((n,k)=>n+used(myAbs,k,U),0),ex=used(myAbs,"extra",U),hx=held(myAbs,"extra",U);
@@ -324,8 +328,8 @@ function meView(){
   h+='<div class="minis m3"><div class="mini"><small>Mjekësor</small><b>'+(20-hm)+'<span> / 20</span></b></div><div class="mini"><small>Të tjera</small><b>'+sp+'<span> ditë</span></b></div><div class="mini"><small>Punë extra</small><b>'+ex+'<span> ditë'+(hx>ex?' (+'+(hx-ex)+')':'')+'</span></b></div></div>';
   h+=mySchedCard();
   h+='<div class="card"><h2>Raporto pushim ose punë extra</h2>'+menuHtml()+'<div class="row" style="margin-top:12px"><div><label for="from">Prej</label><input type="date" id="from" oninput="calc()"></div><div><label for="to">Deri</label><input type="date" id="to" oninput="calc()"></div><div><label for="days">Ditë</label><input type="number" id="days" min="1" max="20" oninput="calc(1)"></div></div><div id="shbox" style="display:none"><label for="shift">Orari i punës extra</label><input id="shift" list="shl2" placeholder="p.sh. 08-16"><datalist id="shl2">'+["07-15","08-16","09-17","10-18","15-23","16-00","23-07"].map(o=>'<option value="'+o+'">').join("")+'</datalist></div><label for="note">Shënim (opsionale)</label><textarea id="note" rows="2"></textarea><div id="docbox" style="display:none"><div class="warn">'+I.warn+'<span><b>Mbi 3 ditë:</b> ngarkoni dëshminë e mjekut (PDF ose foto).</span></div><label for="file">Dëshmia e mjekut</label><input type="file" id="file" accept="application/pdf,image/*"></div><p class="mut" id="left" style="font-size:13px;margin-top:12px"></p><p class="err" id="err"></p><button class="btn p full" style="margin-top:4px" id="go" onclick="send()">Dërgo</button></div>';
-  h+='<div class="card"><h2>Historiku</h2>'+(myAbs.length?myAbs.map(e=>entry(e,false)).join(""):'<p class="mut">Nuk ka pushime të regjistruara.</p>')+'</div>';
-  h+='<div class="card"><h2>Gjendja e pushimeve '+Y+'</h2><div class="scroll"><table><tr><th>Lloji i pushimit</th><th>Të lejuara</th><th>Të shfrytëzuara</th><th>Në dispozicion</th></tr>'+Object.keys(T).filter(k=>!HIDDEN.includes(k)||held(myAbs,k,session.user.id)>0).map(k=>{const a=T[k][1],u=used(myAbs,k,session.user.id),hh=held(myAbs,k,session.user.id);return '<tr><td class="wrapc">'+esc(T[k][0])+'</td><td>'+(a||"—")+'</td><td>'+u+(hh>u?' <span class="mut">(+'+(hh-u)+' në pritje)</span>':'')+'</td><td><b>'+(a?a-hh:"—")+'</b></td></tr>'}).join("")+'</table></div></div>';
+  h+='<div class="card">'+togH("hist","Historiku",myAbs.length)+(openS.hist?(myAbs.length?myAbs.map(e=>entry(e,false)).join(""):'<p class="mut">Nuk ka pushime të regjistruara.</p>'):'')+'</div>';
+  h+='<div class="card">'+togH("bal","Gjendja e pushimeve "+Y)+(!openS.bal?'':'<div class="scroll"><table><tr><th>Lloji i pushimit</th><th>Të lejuara</th><th>Të shfrytëzuara</th><th>Në dispozicion</th></tr>'+Object.keys(T).filter(k=>!HIDDEN.includes(k)||held(myAbs,k,session.user.id)>0).map(k=>{const a=T[k][1],u=used(myAbs,k,session.user.id),hh=held(myAbs,k,session.user.id);return '<tr><td class="wrapc">'+esc(T[k][0])+'</td><td>'+(a||"—")+'</td><td>'+u+(hh>u?' <span class="mut">(+'+(hh-u)+' në pritje)</span>':'')+'</td><td><b>'+(a?a-hh:"—")+'</b></td></tr>'}).join("")+'</table></div>')+'</div>';
   return h;
 }
 const MON=["Janar","Shkurt","Mars","Prill","Maj","Qershor","Korrik","Gusht","Shtator","Tetor","Nëntor","Dhjetor"],WD=["Die","Hën","Mar","Mër","Enj","Pre","Sht"];
