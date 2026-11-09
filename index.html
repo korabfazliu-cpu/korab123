@@ -66,6 +66,7 @@ main.wrap{position:relative;margin-top:-64px;padding-bottom:20px;display:flex;fl
 .tog{display:flex;width:100%;justify-content:space-between;align-items:center;gap:12px;background:none;border:0;padding:0;font:inherit;color:inherit;cursor:pointer;text-align:left}
 .tog h2{margin:0}.tog .chev{width:30px;height:30px;border-radius:50%;background:var(--bg,#eef1f7);display:grid;place-items:center;transition:transform .2s;flex:none}
 .tog .chev svg{width:16px;height:16px}.tog[aria-expanded=true] .chev{transform:rotate(180deg)}.tog[aria-expanded=true]{margin-bottom:12px}
+.pay td,.pay th{white-space:nowrap}.pay tr.tot td{border-top:2px solid var(--bd);background:var(--soft)}
 .hd{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:12px}
 .hd h2{margin:0}
 .big{display:flex;gap:18px;align-items:center;border-radius:24px;padding:20px;box-shadow:0 14px 32px rgba(0,36,106,.14)}
@@ -211,7 +212,7 @@ const logoBlock=h=>'<span class="logo"><img src="'+LOGO+'" alt="038 Parking Cent
 const FOOT='<p class="foot">© 038 Parking Center · Prishtinë</p>';
 const CIRC=n=>Array.from({length:n},(_,i)=>'<span class="circ c'+(i+1)+'" aria-hidden="true"></span>').join("");
 const authPage=(card,below)=>'<div class="ap">'+CIRC(3)+'<div class="apin">'+logoBlock(56)+'<h1 style="margin-top:34px">Digital HR</h1><div class="card">'+card+'</div>'+(below||'')+'<p class="foot">© 038 Parking Center · Prishtinë</p></div></div>';
-let openS={hist:false,bal:false},ltype="",menu=false,sub=null,session=null,me=null,mode="in",tab="me",myAbs=[],profs=[],allAbs=[],armed=null,msg="",q="",flash="",recovering=false,editing=null,opening=[],limp=null,sched={people:[],entries:[]},smonth=today().slice(0,7),sedit=null,imp=null,showSec=false;
+let openS={hist:false,bal:false,hol:false},ltype="",menu=false,sub=null,session=null,me=null,mode="in",tab="me",myAbs=[],profs=[],allAbs=[],armed=null,msg="",q="",flash="",recovering=false,editing=null,opening=[],limp=null,sched={people:[],entries:[]},smonth=today().slice(0,7),sedit=null,imp=null,showSec=false;
 
 sb.auth.onAuthStateChange((ev,s)=>{
   if(ev=="TOKEN_REFRESHED")return;
@@ -241,7 +242,7 @@ function shell(inner){
   const adm=me.role=="admin",pend=profs.filter(x=>x.status=="pending").length+allAbs.filter(a=>st(a)=="pending").length;
   let h='<header class="nhead">'+CIRC(2)+'<div class="wrap"><div class="hrow">'+logoBlock(36)+'<button class="icon-btn" onclick="out()" aria-label="Dil" title="Dil">'+I.out+'</button></div>';
   h+='<div class="who"><p>Mirë se vini,</p><h1>'+esc(me.full_name)+'</h1><p>'+esc(me.position)+' · Kuleta digjitale personale</p></div>';
-  if(adm)h+='<nav class="tabs" aria-label="Seksionet"><button class="'+(tab=="req"?"on":"")+'" onclick="go(\'req\')">Kërkesat'+(pend?' <span class="cnt">'+pend+'</span>':'')+'</button><button class="'+(tab=="staff"?"on":"")+'" onclick="go(\'staff\')">Stafi</button><button class="'+(tab=="sched"?"on":"")+'" onclick="go(\'sched\')">Orari</button><button class="'+(tab=="me"?"on":"")+'" onclick="go(\'me\')">Pushimet e mia</button></nav>';
+  if(adm)h+='<nav class="tabs" aria-label="Seksionet"><button class="'+(tab=="req"?"on":"")+'" onclick="go(\'req\')">Kërkesat'+(pend?' <span class="cnt">'+pend+'</span>':'')+'</button><button class="'+(tab=="staff"?"on":"")+'" onclick="go(\'staff\')">Stafi</button><button class="'+(tab=="sched"?"on":"")+'" onclick="go(\'sched\')">Orari</button><button class="'+(tab=="pay"?"on":"")+'" onclick="go(\'pay\')">Pagat</button><button class="'+(tab=="me"?"on":"")+'" onclick="go(\'me\')">Pushimet e mia</button></nav>';
   return h+'</div></header><main class="wrap">'+inner+'</main>'+FOOT;
 }
 
@@ -255,10 +256,10 @@ function draw(){
     return app.innerHTML=authPage('<h2>'+(me.status=="pending"?"Llogaria pret miratimin":"Llogaria u refuzua")+'</h2><p class="mut">'+(me.status=="pending"?"Administratori duhet ta miratojë llogarinë tuaj para se të hyni. Kthehuni më vonë.":"Administratori nuk e miratoi këtë llogari. Kontaktoni menaxherin.")+'</p><div style="display:flex;gap:8px;margin-top:18px"><button class="btn p" onclick="load()">Rifresko</button><button class="btn" onclick="out()">Dil</button></div>');
   }
   const adm=me.role=="admin";
-  app.innerHTML=shell(adm&&tab=="req"?reqView():adm&&tab=="staff"?staffView():adm&&tab=="sched"?schedView(true):meView());
+  app.innerHTML=shell(adm&&tab=="req"?reqView():adm&&tab=="staff"?staffView():adm&&tab=="sched"?schedView(true):adm&&tab=="pay"?payView():meView());
   if($("#from")){$("#from").value=keep.f||"";$("#to").value=keep.t||"";$("#note").value=keep.n||"";$("#shift").value=keep.s||"";if(keep.d){$("#days").value=keep.d;calc(1)}else calc()}
 }
-const go=t=>{tab=t;menu=false;sedit=null;draw()};
+const go=t=>{tab=t;menu=false;sedit=null;if(t=="pay")loadPay();else draw()};
 
 function authView(){
   const su=mode=="up",fg=mode=="forgot",ent=' onkeydown="if(event.key==\'Enter\')$(\'#sub\').click()"';
@@ -590,6 +591,73 @@ async function openDoc(p){
   const {data,error}=await sb.storage.from("documents").createSignedUrl(p,120);
   if(error||!data){if(w)w.close();alert("Dëshmia nuk u hap.");return}
   if(w)w.location=data.signedUrl;else location.href=data.signedUrl;
+}
+let pmon=new Date().toISOString().slice(0,7),pay=null,payErr="",payEd=false,hols=[];
+const eur=v=>v==null?"—":(+v).toLocaleString("de-DE",{minimumFractionDigits:2,maximumFractionDigits:2})+" €";
+async function loadPay(){
+  pay=null;payErr="";draw();
+  const [y,m]=pmon.split("-").map(Number);
+  try{
+    const [r,h]=await Promise.all([sb.rpc("payroll_month",{p_year:y,p_month:m}),sb.from("holidays").select("*").order("day")]);
+    if(r.error)throw r.error;pay=r.data||[];hols=h.data||[];
+  }catch(e){payErr="Pagat nuk u llogaritën: "+(e.message||e)}
+  if(tab=="pay")draw();
+}
+function payView(){
+  const y=pmon.slice(0,4);
+  let h='<div class="card"><div class="hd"><h2>Pagat</h2><div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center"><input type="month" id="pm" value="'+pmon+'" onchange="if(this.value){pmon=this.value;loadPay()}" style="width:auto;margin:0"><button class="btn ol sm" onclick="payCsv()"'+(pay&&pay.length?'':' disabled')+'>Shkarko Excel</button><button class="btn sm" onclick="payEd=!payEd;draw()">'+(payEd?"Mbyll ndryshimin":"Ndrysho pagat bazë")+'</button></div></div>';
+  h+='<p class="mut" style="font-size:13px;margin:-4px 0 12px">Paga ditore = paga bazë / 22. Totali = paga bazë + ditët extra × paga ditore + festat zyrtare në orar × paga ditore. Part time: ditët e punës × paga ditore.</p>';
+  if(payErr)h+='<p class="err">'+esc(payErr)+'</p>';
+  else if(!pay)h+='<p class="mut">Duke llogaritur…</p>';
+  else if(!pay.length)h+='<p class="mut">Nuk ka punonjës në listë.</p>';
+  else{
+    const sum=k=>pay.reduce((s,r)=>s+(+r[k]||0),0);
+    h+='<div class="scroll"><table class="pay"><tr><th>Emri</th><th>Paga bazë</th><th>Ditë pune</th><th>Punë extra</th><th>Festa zyrtare</th><th>Totali</th></tr>';
+    h+=pay.map(r=>{
+      const base=payEd?'<div style="display:flex;gap:6px;min-width:190px"><input id="pmo_'+r.person_id+'" type="number" min="0" step="0.01" placeholder="Mujore €" value="'+(r.monthly??"")+'" style="margin:0;padding:8px 10px"><input id="pda_'+r.person_id+'" type="number" min="0" step="0.01" placeholder="Ditore € (part time)" value="'+(r.monthly==null&&r.daily_rate!=null?r.daily_rate:"")+'" style="margin:0;padding:8px 10px"></div>'
+        :r.missing_base?'<span class="badge w">Mungon paga</span>':r.monthly!=null?eur(r.monthly):'<span class="badge t">Part time</span>';
+      return '<tr><td><b>'+esc(r.name)+'</b>'+(r.position?'<div class="mut" style="font-size:12px">'+esc(r.position)+'</div>':'')+'</td><td>'+base+(r.daily_rate!=null&&!payEd?'<div class="mut" style="font-size:12px">'+eur(r.daily_rate)+' / ditë</div>':'')+'</td><td>'+r.work_days+'</td><td>'+(r.extra_days?r.extra_days+' ditë<div class="mut" style="font-size:12px">+'+eur(r.extra_pay)+'</div>':'—')+'</td><td'+(r.holiday_list?' title="'+esc(r.holiday_list)+'"':'')+'>'+(r.holiday_days?r.holiday_days+' ditë<div class="mut" style="font-size:12px">+'+eur(r.holiday_pay)+'</div>':'—')+'</td><td><b>'+eur(r.total)+'</b></td></tr>'}).join("");
+    h+='<tr class="tot"><td><b>Gjithsej</b></td><td>'+eur(sum("base_pay"))+'</td><td></td><td>'+eur(sum("extra_pay"))+'</td><td>'+eur(sum("holiday_pay"))+'</td><td><b>'+eur(sum("total"))+'</b></td></tr></table></div>';
+    if(payEd)h+='<p class="err" id="perr"></p><div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn p" id="pgo" onclick="savePay()">Ruaj pagat</button><button class="btn" onclick="payEd=false;draw()">Anulo</button></div>';
+    h+='<p class="mut" style="font-size:12px;margin-top:8px">Ditët merren nga orari: ditët extra janë ato të shënuara si extra në orar ose kërkesat "Punë extra" të miratuara.</p>';
+  }
+  h+='</div>';
+  const hy=hols.filter(x=>x.day.startsWith(y));
+  h+='<div class="card">'+togH("hol","Festat zyrtare "+y,hy.length)+(openS.hol?(hy.length?'<div class="scroll"><table><tr><th>Data</th><th>Festa</th><th></th></tr>'+hy.map(x=>'<tr><td>'+x.day.split("-").reverse().join(".")+'</td><td>'+esc(x.name)+'</td><td style="text-align:right"><button class="btn sm" onclick="delHol(\''+x.day+'\')">Fshi</button></td></tr>').join("")+'</table></div>':'<p class="mut">Nuk ka festa për '+y+'.</p>')+'<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:12px;align-items:center"><input type="date" id="hd" style="width:auto;margin:0"><input id="hn" placeholder="Emri i festës" maxlength="80" style="flex:1;min-width:160px;margin:0"><button class="btn p sm" onclick="addHol()">Shto festën</button></div><p class="err" id="herr"></p>':'')+'</div>';
+  return h;
+}
+async function savePay(){
+  const er=$("#perr"),b=$("#pgo");er.textContent="";
+  const rows=[];
+  for(const r of pay){
+    const mo=$("#pmo_"+r.person_id).value.trim(),da=$("#pda_"+r.person_id).value.trim();
+    if(mo&&da){er.textContent=r.name+": plotësoni vetëm pagën mujore ose vetëm ditoren (part time).";return}
+    if((mo&&+mo<0)||(da&&+da<0)){er.textContent=r.name+": paga nuk mund të jetë negative.";return}
+    rows.push({person_id:r.person_id,monthly:mo?+mo:null,daily:da?+da:null,updated_at:new Date().toISOString()});
+  }
+  b.disabled=true;
+  const {error}=await sb.from("payroll_base").upsert(rows,{onConflict:"person_id"});
+  if(error){b.disabled=false;er.textContent="Ruajtja dështoi: "+error.message;return}
+  payEd=false;loadPay();
+}
+async function addHol(){
+  const d=$("#hd").value,n=$("#hn").value.trim(),er=$("#herr");er.textContent="";
+  if(!d||!n){er.textContent="Zgjidhni datën dhe shkruani emrin e festës.";return}
+  const {error}=await sb.from("holidays").upsert({day:d,name:n},{onConflict:"day"});
+  if(error){er.textContent="Festa nuk u ruajt: "+error.message;return}
+  loadPay();
+}
+async function delHol(d){
+  const {error}=await sb.from("holidays").delete().eq("day",d);
+  if(error){alert("Festa nuk u fshi: "+error.message);return}
+  loadPay();
+}
+function payCsv(){
+  const qq=v=>'"'+String(v==null?"":v).replace(/"/g,'""')+'"',n=v=>v==null?"":(+v).toFixed(2).replace(".",",");
+  let c="Emri;Pozita;Paga bazë;Paga ditore;Ditë pune;Ditë extra;Festa;Festat;Shtesa extra;Shtesa festash;Totali\n";
+  pay.forEach(r=>{c+=[qq(r.name),qq(r.position),r.monthly==null?qq("Part time"):n(r.monthly),n(r.daily_rate),r.work_days,r.extra_days,r.holiday_days,qq(r.holiday_list),n(r.extra_pay),n(r.holiday_pay),n(r.total)].join(";")+"\n"});
+  c+=[qq("Gjithsej"),"",n(pay.reduce((s,r)=>s+(+r.base_pay||0),0)),"","","","","",n(pay.reduce((s,r)=>s+(+r.extra_pay||0),0)),n(pay.reduce((s,r)=>s+(+r.holiday_pay||0),0)),n(pay.reduce((s,r)=>s+(+r.total||0),0))].join(";")+"\n";
+  const a=document.createElement("a");a.href=URL.createObjectURL(new Blob(["\ufeff"+c],{type:"text/csv"}));a.download="pagat-"+pmon+".csv";a.click();
 }
 function csv(){
   const qq=v=>'"'+String(v==null?"":v).replace(/"/g,'""')+'"';
