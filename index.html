@@ -89,6 +89,7 @@ main.wrap{position:relative;margin-top:-64px;padding-bottom:20px;display:flex;fl
 .ovrow{display:flex;gap:12px;align-items:center;justify-content:space-between;flex-wrap:wrap;padding:9px 0;border-bottom:1px solid var(--bd);font-size:13px}
 .ovrow>span:first-of-type{flex:1}.ovrow.tot{border-bottom:0;font-size:15px}
 tr.arm td{background:#FFF8F7}
+.ntf{border:2px solid var(--blue)}.ntfi{padding:12px 0;border-top:1px solid var(--bd)}.ntfi:first-of-type{border-top:0;padding-top:4px}.ntfi b{display:block}.ntfi p{margin:8px 0 10px;font-size:14px;line-height:1.5}
 .sgt tr.mine td{background:#EEF3FF}.sgt tr.mine td:first-child{border-radius:10px 0 0 10px}.sgt tr.mine td:last-child{border-radius:0 10px 10px 0}.sgt tr.mine .nm{color:var(--blue);font-weight:800;background:#EEF3FF;box-shadow:-18px 0 0 #EEF3FF}.chip.minec{outline:2px solid var(--blue)}
 .mates{display:block;font-size:10.5px;line-height:1.3;color:var(--mut);margin-top:4px;word-break:break-word}
 .sickbox{margin-top:12px;padding:14px 16px;border-radius:16px;background:#FFF6E5;border:1px solid #FFD58A;font-size:14px;line-height:1.5}.sickbox p{margin:0 0 10px}.chk{display:flex;gap:10px;align-items:center;font-weight:600;cursor:pointer}.chk input{width:20px;height:20px;margin:0;flex:none}
@@ -258,6 +259,7 @@ async function load(){
   if(me&&me.status=="approved"){
     const a=await sb.from("absences").select("*").eq("user_id",uid).order("from_date",{ascending:false});
     myAbs=a.data||[];
+    try{const nn=await sb.from("notifications").select("*").eq("user_id",uid).order("created_at",{ascending:false});notes=(nn.data||[]).slice(0,20)}catch(e){notes=[]}
     if(me.role=="admin"){
       const [p,b]=await Promise.all([sb.from("profiles").select("*").order("full_name"),sb.from("absences").select("*").order("from_date",{ascending:false})]);
       profs=p.data||[];allAbs=b.data||[];loadEmails();
@@ -287,7 +289,7 @@ function draw(){
     return app.innerHTML=authPage('<h2>'+(me.status=="pending"?"Llogaria pret miratimin":"Llogaria u refuzua")+'</h2><p class="mut">'+(me.status=="pending"?"Administratori duhet ta miratojë llogarinë tuaj para se të hyni. Kthehuni më vonë.":"Administratori nuk e miratoi këtë llogari. Kontaktoni menaxherin.")+'</p><div style="display:flex;gap:8px;margin-top:18px"><button class="btn p" onclick="load()">Rifresko</button><button class="btn" onclick="out()">Dil</button></div>');
   }
   const adm=me.role=="admin",prevS=[...document.querySelectorAll(".sg")].map(e=>e.scrollLeft);
-  app.innerHTML=shell(adm&&tab=="req"?reqView():adm&&tab=="staff"?staffView():adm&&tab=="sched"?schedView(true):adm&&tab=="pay"?payView():adm&&tab=="ov"?ovView():meView());
+  app.innerHTML=shell(adm&&tab=="req"?reqView():adm&&tab=="staff"?staffView():adm&&tab=="sched"?schedView(true):adm&&tab=="pay"?payView():adm&&tab=="ov"?ovView():notifCard()+meView());
   if($("#from")){$("#from").value=keep.f||"";$("#to").value=keep.t||"";$("#note").value=keep.n||"";$("#shift").value=keep.s||"";if(keep.d){$("#days").value=keep.d;calc(1)}else calc()}
   sgFocus(prevS);
 }
@@ -522,22 +524,43 @@ async function leavePick(inp){
   catch(e){limp={error:e.message||String(e)}}
   draw();
 }
-let lEd=null,lErr="";
+let lEd=null,lErr="",notes=[];
 const LTYPES=["vjetor","mjekesor","martese","vdekje","lindje","gjak","papagese","extra"];
 // Admin correction of a person's starting balance for the year (days already used before / outside the app).
-function lEditRow(p,a){
+let aEd=null;
+// Edit from the account table: uses the staff name linked to this account.
+function accEditRow(s){
+  const p=sched.people.find(x=>x.user_id==s.id);
+  if(!p)return '<tr class="arm"><td colspan="7"><p style="margin:0 0 10px">Llogaria e <b>'+esc(s.full_name)+'</b> nuk është e lidhur me një emër në orar, prandaj ditët nuk mund të korrigjohen këtu. Lidheni te "Lidhja e orarit me llogaritë".</p><button class="btn" onclick="aEd=null;draw()">Mbyll</button></td></tr>';
+  return lEditRow(p,k=>sumY(allAbs.filter(z=>z.user_id==s.id),k,x=>x=="approved"),7);
+}
+function lEditRow(p,a,cols){
   const o=k=>opening.filter(x=>x.person_id==p.id&&x.leave_type==k).reduce((s,x)=>s+x.used_days,0);
-  return '<tr class="arm"><td colspan="7"><p style="margin:0 0 4px"><b>Korrigjo ditët e '+esc(p.name)+' për '+Y+'</b></p><p class="mut" style="font-size:12px;margin:0 0 10px">Shkruani ditët e shfrytëzuara jashtë aplikacionit, ose për vjetor/mjekësor ditët që i mbeten. Pushimet e miratuara në aplikacion ('+(p.user_id?'llogaritet vetë':'pa llogari të lidhur')+') shtohen sipër këtyre.</p><div class="ledg">'+LTYPES.map(k=>{const lim=T[k][1],ap=a(k);
-    return '<div class="lef"><label for="lo_'+k+'">'+esc(T[k][0])+(lim?' <span class="mut">/ '+lim+'</span>':'')+'</label><input id="lo_'+k+'" type="number" min="0" max="366" value="'+o(k)+'" oninput="lSync(\''+k+'\','+lim+','+ap+',0)">'+(lim?'<div class="mut" style="font-size:12px;margin-top:4px">Në dispozicion: <input id="lr_'+k+'" type="number" min="0" max="'+lim+'" value="'+(lim-o(k)-ap)+'" oninput="lSync(\''+k+'\','+lim+','+ap+',1)" style="width:70px;height:32px;padding:0 10px;display:inline-block"></div>':'')+(ap?'<div class="mut" style="font-size:12px;margin-top:2px">+ '+ap+' të miratuara në aplikacion</div>':'')+'</div>'}).join("")+'</div>'+(lErr?'<p class="err">'+esc(lErr)+'</p>':'')+'<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:12px"><button class="btn p" id="lsave" onclick="lSave(\''+p.id+'\')">Ruaj</button><button class="btn" onclick="lEd=null;lErr=\'\';draw()">Anulo</button></div></td></tr>';
+  return '<tr class="arm"><td colspan="'+(cols||7)+'"><p style="margin:0 0 4px"><b>Korrigjo ditët e '+esc(p.name)+' për '+Y+'</b></p><p class="mut" style="font-size:12px;margin:0 0 10px">Shkruani ditët e shfrytëzuara jashtë aplikacionit, ose për vjetor/mjekësor ditët që i mbeten. Pushimet e miratuara në aplikacion ('+(p.user_id?'llogaritet vetë':'pa llogari të lidhur')+') shtohen sipër këtyre.</p><div class="ledg">'+LTYPES.map(k=>{const lim=T[k][1],ap=a(k);
+    return '<div class="lef"><label for="lo_'+k+'">'+esc(T[k][0])+(lim?' <span class="mut">/ '+lim+'</span>':'')+'</label><input id="lo_'+k+'" type="number" min="0" max="366" value="'+o(k)+'" oninput="lSync(\''+k+'\','+lim+','+ap+',0)">'+(lim?'<div class="mut" style="font-size:12px;margin-top:4px">Në dispozicion: <input id="lr_'+k+'" type="number" min="0" max="'+lim+'" value="'+Math.max(0,lim-o(k)-ap)+'" oninput="lSync(\''+k+'\','+lim+','+ap+',1)" style="width:70px;height:32px;padding:0 10px;display:inline-block"></div>':'')+(ap?'<div class="mut" style="font-size:12px;margin-top:2px">+ '+ap+' të miratuara në aplikacion</div>':'')+'</div>'}).join("")+'</div>'+(lErr?'<p class="err">'+esc(lErr)+'</p>':'')+'<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:12px"><button class="btn p" id="lsave" onclick="lSave(\''+p.id+'\')">Ruaj</button><button class="btn" onclick="lEd=null;aEd=null;lErr=\'\';draw()">Anulo</button></div></td></tr>';
 }
 function lSync(k,lim,ap,fromRem){const u=$("#lo_"+k),r=$("#lr_"+k);if(!r)return;if(fromRem)u.value=Math.max(0,lim-ap-(+r.value||0));else r.value=lim-ap-(+u.value||0)}
 async function lSave(pid){
   const rows=[];for(const k of LTYPES){const v=+$("#lo_"+k).value;if(!Number.isInteger(v)||v<0||v>366){lErr="Vlera për "+T[k][0]+" duhet të jetë numër i plotë 0–366.";return draw()}rows.push({person_id:pid,year:Y,leave_type:k,used_days:v,updated_at:new Date().toISOString()})}
   $("#lsave").disabled=true;
+  const per=sched.people.find(x=>x.id==pid),old=k=>opening.filter(x=>x.person_id==pid&&x.leave_type==k&&x.year==Y).reduce((s,x)=>s+x.used_days,0);
+  const ch=rows.filter(x=>x.used_days!=old(x.leave_type));
   const {error}=await sb.from("leave_opening").upsert(rows,{onConflict:"person_id,year,leave_type"});
   if(error){lErr="Ruajtja dështoi: "+error.message;return draw()}
-  lEd=null;lErr="";await loadSched();draw();
+  if(ch.length&&per&&per.user_id){
+    const ap=k=>sumY(allAbs.filter(z=>z.user_id==per.user_id),k,x=>x=="approved");
+    const lines=ch.map(x=>{const lim=T[x.leave_type][1],u=x.used_days+ap(x.leave_type);return "• "+T[x.leave_type][0]+": "+(lim?u+" ditë të shfrytëzuara, "+Math.max(0,lim-u)+" në dispozicion":u+" ditë")});
+    const first=(profs.find(z=>z.id==per.user_id)||{full_name:per.name}).full_name.split(" ")[0];
+    const nr=await sb.from("notifications").insert({user_id:per.user_id,title:"Ditët e pushimit u përditësuan",body:"Përshëndetje "+first+", administratori përditësoi ditët tuaja të pushimit për "+Y+":\n"+lines.join("\n")+"\nPër pyetje, na kontaktoni."});
+    if(nr.error)alert("Ndryshimet u ruajtën, por njoftimi nuk u dërgua: "+nr.error.message);
+  }
+  lEd=null;aEd=null;lErr="";await loadSched();draw();
 }
+function notifCard(){
+  const un=notes.filter(n=>!n.read_at);if(!un.length)return "";
+  return '<div class="card ntf"><h2>Njoftime <span class="badge t">'+un.length+'</span></h2>'+un.map(n=>'<div class="ntfi"><b>'+esc(n.title)+'</b><span class="mut" style="font-size:12px">'+fmt(n.created_at.slice(0,10))+'</span><p>'+esc(n.body).replace(/\n/g,"<br>")+'</p><button class="btn sm" onclick="readNote(\''+n.id+'\')">E kuptova</button></div>').join("")+'</div>';
+}
+async function readNote(id){const n=notes.find(x=>x.id==id);if(n)n.read_at=new Date().toISOString();draw();await sb.from("notifications").update({read_at:new Date().toISOString()}).eq("id",id)}
 function leaveCard(){
   let h='<div class="card"><div class="hd"><h2>Gjendja e pushimeve nga Excel · '+Y+'</h2><label class="btn ol" style="margin:0;cursor:pointer">Ngarko gjendjen e pushimeve<input type="file" accept=".xlsx,.xls" style="display:none" onchange="leavePick(this)"></label></div><p class="mut" style="font-size:13px;margin:-4px 0 10px">Ditët e shfrytëzuara nga Excel-i (një fletë për çdo punonjës) ruhen si pikënisje për '+Y+'. Aplikacioni u shton pushimet e miratuara këtu dhe limitet i llogarit bashkë.</p>';
   if(limp&&limp.error)h+='<p class="err">'+esc(limp.error)+'</p><button class="btn sm" onclick="limp=null;draw()">Mbyll</button>';
@@ -582,8 +605,8 @@ function staffView(){
   const by=id=>allAbs.filter(a=>a.user_id==id);
   const ql=q.trim().toLowerCase(),list=ap.filter(s=>!ql||(s.full_name+" "+s.position).toLowerCase().includes(ql));
   const pm=u=>'<div class="pm"><i><em style="width:'+Math.min(100,u/20*100)+'%"></em></i>'+u+'/20</div>';
-  const rows=list.map(s=>{const e=by(s.id);const oth=Object.keys(T).filter(k=>k!="vjetor"&&k!="mjekesor"&&k!="extra").reduce((n,k)=>n+used(e,k,s.id),0);return '<tr><td><div style="display:flex;align-items:center;gap:10px"><span class="av">'+esc(ini(s.full_name))+'</span><b>'+esc(s.full_name)+'</b></div></td><td class="mut">'+esc(s.position)+'</td><td>'+pm(used(e,"vjetor",s.id))+'</td><td>'+pm(used(e,"mjekesor",s.id))+'</td><td>'+oth+'</td><td>'+used(e,"extra",s.id)+'</td></tr>'}).join("");
-  h+='<div class="card"><div class="hd"><h2>Përmbledhje</h2><div style="display:flex;gap:8px;flex-wrap:wrap"><label class="sr" for="q">Kërko punonjës</label><input id="q" type="search" placeholder="Kërko punonjës" value="'+esc(q)+'" oninput="search(this.value)" style="height:44px;width:220px"><button class="btn ol" onclick="csv()">'+I.dl+'Eksporto CSV</button></div></div><div class="scroll"><table><tr><th>Emri</th><th>Pozita</th><th>Vjetor</th><th>Mjekësor</th><th>Të tjera</th><th>Punë extra</th></tr>'+(rows||'<tr><td colspan="6" class="mut">Asnjë rezultat.</td></tr>')+'</table></div></div>';
+  const rows=list.map(s=>{const e=by(s.id);const oth=Object.keys(T).filter(k=>k!="vjetor"&&k!="mjekesor"&&k!="extra").reduce((n,k)=>n+used(e,k,s.id),0);return '<tr><td><div style="display:flex;align-items:center;gap:10px"><span class="av">'+esc(ini(s.full_name))+'</span><b>'+esc(s.full_name)+'</b></div></td><td class="mut">'+esc(s.position)+'</td><td>'+pm(used(e,"vjetor",s.id))+'</td><td>'+pm(used(e,"mjekesor",s.id))+'</td><td>'+oth+'</td><td>'+used(e,"extra",s.id)+'</td><td style="text-align:right">'+(s.role=="admin"||aEd==s.id?'':'<button class="btn sm" onclick="aEd=\''+s.id+'\';lErr=\'\';draw()">Ndrysho</button>')+'</td></tr>'+(aEd==s.id?accEditRow(s):'')}).join("");
+  h+='<div class="card"><div class="hd"><h2>Përmbledhje</h2><div style="display:flex;gap:8px;flex-wrap:wrap"><label class="sr" for="q">Kërko punonjës</label><input id="q" type="search" placeholder="Kërko punonjës" value="'+esc(q)+'" oninput="search(this.value)" style="height:44px;width:220px"><button class="btn ol" onclick="csv()">'+I.dl+'Eksporto CSV</button></div></div><div class="scroll"><table><tr><th>Emri</th><th>Pozita</th><th>Vjetor</th><th>Mjekësor</th><th>Të tjera</th><th>Punë extra</th><th></th></tr>'+(rows||'<tr><td colspan="6" class="mut">Asnjë rezultat.</td></tr>')+'</table></div></div>';
   h+=accCard()+leaveCard()+linkCard();
   h+=list.map(s=>'<div class="card"><div class="hd"><div style="display:flex;align-items:center;gap:10px"><span class="av">'+esc(ini(s.full_name))+'</span><div><h2 style="margin:0">'+esc(s.full_name)+'</h2><div class="mut" style="font-size:13px">'+esc(s.position)+'</div></div></div></div>'+(by(s.id).length?by(s.id).map(e=>entry(e,true)).join(""):'<span class="mut">Pa pushime.</span>')+'</div>').join("");
   return h;
