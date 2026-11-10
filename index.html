@@ -431,11 +431,12 @@ function parseSheet(wb){
   if(hr<0)throw new Error("Nuk u gjet rreshti me \"Emri\" dhe datat.");
   const cols=[];(g[hr]||[]).forEach((v,j)=>{if(j>0){const x=parseDay(v);if(x)cols.push([j,x])}});
   if(!cols.length)throw new Error("Nuk u gjetën datat në rreshtin e titullit.");
-  const people=new Map(),entries=[],extraRaw=[];let dept="Pa seksion";
+  const people=new Map(),entries=[],extraRaw=[];let dept="Pa seksion",prev=dept,seen=true;
   for(let i=hr+1;i<g.length;i++){const r=g[i]||[],nm=String(r[0]||"").trim();if(!nm)continue;
-    if(deptRows.has(i)){dept=nm;continue}
-    if(nm.toLowerCase()=="extra"){cols.forEach(([j,x])=>{const v=r[j];if(v!=null&&String(v).trim())extraRaw.push([x,dept,String(v).trim()])});continue}
-    people.set(nm,1);cols.forEach(([j,x])=>{const v=r[j];if(v!=null&&String(v).trim())entries.push({day:x,dept,name:nm,value:String(v).trim()})})}
+    if(deptRows.has(i)){prev=dept;dept=nm;seen=false;continue}
+    // An "Extra" row right under a section title (before its people) belongs to the section above it.
+    if(nm.toLowerCase()=="extra"){const dp=seen?dept:prev;cols.forEach(([j,x])=>{const v=r[j];if(v!=null&&String(v).trim())extraRaw.push([x,dp,String(v).trim()])});continue}
+    seen=true;people.set(nm,1);cols.forEach(([j,x])=>{const v=r[j];if(v!=null&&String(v).trim())entries.push({day:x,dept,name:nm,value:String(v).trim()})})}
   const names=[...people.keys()];
   const match=n=>{const l=n.toLowerCase(),ex=names.filter(p=>p.toLowerCase()==l);if(ex.length)return ex[0];const c=names.filter(p=>p.toLowerCase().split(/\s+/).includes(l));return c.length==1?c[0]:null};
   const extras=extraRaw.map(([x,dp,t])=>{const m=t.match(/^(.*?)\s+(\d{1,2}\s*-\s*\d{1,2}\*?)$/),n=m?m[1].trim():t;return {day:x,dept:dp,name:match(n),label:n,value:m?m[2].replace(/\s/g,""):t}});
