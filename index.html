@@ -89,6 +89,7 @@ main.wrap{position:relative;margin-top:-64px;padding-bottom:20px;display:flex;fl
 .ovrow{display:flex;gap:12px;align-items:center;justify-content:space-between;flex-wrap:wrap;padding:9px 0;border-bottom:1px solid var(--bd);font-size:13px}
 .ovrow>span:first-of-type{flex:1}.ovrow.tot{border-bottom:0;font-size:15px}
 tr.arm td{background:#FFF8F7}
+.ledg{display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:14px;min-width:0}tr.arm td,.ledg *{white-space:normal}.lef label{min-height:34px}.lef label{font-size:13px;font-weight:600;display:block;margin-bottom:4px}.lef input[type=number]{height:42px}
 select.pick{appearance:none;-webkit-appearance:none;cursor:pointer;padding-right:44px;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%2364748B' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E")!important;background-repeat:no-repeat!important;background-position:right 18px center!important;background-size:16px!important}
 select.pick:invalid{color:var(--mut)}select.pick option{color:var(--tx)}
 .sgt .nm,.ovt .nm{box-shadow:-18px 0 0 #fff}
@@ -513,6 +514,22 @@ async function leavePick(inp){
   catch(e){limp={error:e.message||String(e)}}
   draw();
 }
+let lEd=null,lErr="";
+const LTYPES=["vjetor","mjekesor","martese","vdekje","lindje","gjak","papagese","extra"];
+// Admin correction of a person's starting balance for the year (days already used before / outside the app).
+function lEditRow(p,a){
+  const o=k=>opening.filter(x=>x.person_id==p.id&&x.leave_type==k).reduce((s,x)=>s+x.used_days,0);
+  return '<tr class="arm"><td colspan="7"><p style="margin:0 0 4px"><b>Korrigjo ditët e '+esc(p.name)+' për '+Y+'</b></p><p class="mut" style="font-size:12px;margin:0 0 10px">Shkruani ditët e shfrytëzuara jashtë aplikacionit, ose për vjetor/mjekësor ditët që i mbeten. Pushimet e miratuara në aplikacion ('+(p.user_id?'llogaritet vetë':'pa llogari të lidhur')+') shtohen sipër këtyre.</p><div class="ledg">'+LTYPES.map(k=>{const lim=T[k][1],ap=a(k);
+    return '<div class="lef"><label for="lo_'+k+'">'+esc(T[k][0])+(lim?' <span class="mut">/ '+lim+'</span>':'')+'</label><input id="lo_'+k+'" type="number" min="0" max="366" value="'+o(k)+'" oninput="lSync(\''+k+'\','+lim+','+ap+',0)">'+(lim?'<div class="mut" style="font-size:12px;margin-top:4px">Në dispozicion: <input id="lr_'+k+'" type="number" min="0" max="'+lim+'" value="'+(lim-o(k)-ap)+'" oninput="lSync(\''+k+'\','+lim+','+ap+',1)" style="width:70px;height:32px;padding:0 10px;display:inline-block"></div>':'')+(ap?'<div class="mut" style="font-size:12px;margin-top:2px">+ '+ap+' të miratuara në aplikacion</div>':'')+'</div>'}).join("")+'</div>'+(lErr?'<p class="err">'+esc(lErr)+'</p>':'')+'<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:12px"><button class="btn p" id="lsave" onclick="lSave(\''+p.id+'\')">Ruaj</button><button class="btn" onclick="lEd=null;lErr=\'\';draw()">Anulo</button></div></td></tr>';
+}
+function lSync(k,lim,ap,fromRem){const u=$("#lo_"+k),r=$("#lr_"+k);if(!r)return;if(fromRem)u.value=Math.max(0,lim-ap-(+r.value||0));else r.value=lim-ap-(+u.value||0)}
+async function lSave(pid){
+  const rows=[];for(const k of LTYPES){const v=+$("#lo_"+k).value;if(!Number.isInteger(v)||v<0||v>366){lErr="Vlera për "+T[k][0]+" duhet të jetë numër i plotë 0–366.";return draw()}rows.push({person_id:pid,year:Y,leave_type:k,used_days:v,updated_at:new Date().toISOString()})}
+  $("#lsave").disabled=true;
+  const {error}=await sb.from("leave_opening").upsert(rows,{onConflict:"person_id,year,leave_type"});
+  if(error){lErr="Ruajtja dështoi: "+error.message;return draw()}
+  lEd=null;lErr="";await loadSched();draw();
+}
 function leaveCard(){
   let h='<div class="card"><div class="hd"><h2>Gjendja e pushimeve nga Excel · '+Y+'</h2><label class="btn ol" style="margin:0;cursor:pointer">Ngarko gjendjen e pushimeve<input type="file" accept=".xlsx,.xls" style="display:none" onchange="leavePick(this)"></label></div><p class="mut" style="font-size:13px;margin:-4px 0 10px">Ditët e shfrytëzuara nga Excel-i (një fletë për çdo punonjës) ruhen si pikënisje për '+Y+'. Aplikacioni u shton pushimet e miratuara këtu dhe limitet i llogarit bashkë.</p>';
   if(limp&&limp.error)h+='<p class="err">'+esc(limp.error)+'</p><button class="btn sm" onclick="limp=null;draw()">Mbyll</button>';
@@ -520,8 +537,8 @@ function leaveCard(){
     h+='<div class="info" style="margin:0 0 10px"><span><b>'+esc(limp.file)+'</b>: '+limp.rows.length+' punonjës'+(nw.length?' · të rinj në listë: '+esc(nw.join(", ")):'')+(limp.bad.length?' · fletë të palexueshme: '+esc(limp.bad.join(", ")):'')+'</span></div><div class="scroll"><table><tr><th>Emri</th><th>Vjetor</th><th>Mjekësor</th><th>Të tjera</th><th>Extra</th></tr>'+limp.rows.map(x=>{const u=x.used,o=["martese","vdekje","lindje","gjak","papagese"].reduce((n,k)=>n+(u[k]||0),0);return '<tr><td>'+esc(x.name)+(findP(x.name)?'':' <span class="badge t">i ri</span>')+'</td><td>'+(u.vjetor||0)+'/20</td><td>'+(u.mjekesor||0)+'/20</td><td>'+o+'</td><td>'+(u.extra||0)+'</td></tr>'}).join("")+'</table></div><div class="warn">'+I.warn+'<span>Vlerat për '+Y+' të këtyre punonjësve do të zëvendësohen me ato të Excel-it.</span></div><p class="err" id="lerr"></p><div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn p" id="lgo" onclick="doLeaveImport()">Konfirmo importin</button><button class="btn" onclick="limp=null;draw()">Anulo</button></div>'}
   else if(sched.people.length){
     const rows=sched.people.map(p=>{const o=k=>opening.filter(x=>x.person_id==p.id&&x.leave_type==k).reduce((s,x)=>s+x.used_days,0),a=k=>p.user_id?sumY(allAbs.filter(z=>z.user_id==p.user_id),k,s=>s=="approved"):0,t=k=>o(k)+a(k),oth=["martese","vdekje","lindje","gjak","papagese"].reduce((n,k)=>n+t(k),0),acc=profs.find(x=>x.id==p.user_id);
-      return '<tr><td><b>'+esc(p.name)+'</b>'+(p.position?'<div class="mut" style="font-size:12px">'+esc(p.position)+'</div>':'')+'</td><td>'+t("vjetor")+'/20</td><td>'+t("mjekesor")+'/20</td><td>'+oth+'</td><td>'+t("extra")+'</td><td>'+(acc?esc(acc.full_name):'<span class="badge w">Pa lidhje</span>')+'</td></tr>'}).join("");
-    h+='<div class="scroll"><table><tr><th>Emri</th><th>Vjetor</th><th>Mjekësor</th><th>Të tjera</th><th>Extra</th><th>Llogaria</th></tr>'+rows+'</table></div><p class="mut" style="font-size:12px;margin-top:8px">Ditët = Excel + pushimet e miratuara në aplikacion (pas lidhjes me llogarinë).</p>'}
+      return '<tr><td><b>'+esc(p.name)+'</b>'+(p.position?'<div class="mut" style="font-size:12px">'+esc(p.position)+'</div>':'')+'</td><td>'+t("vjetor")+'/20</td><td>'+t("mjekesor")+'/20</td><td>'+oth+'</td><td>'+t("extra")+'</td><td>'+(acc?esc(acc.full_name):'<span class="badge w">Pa lidhje</span>')+'</td><td style="text-align:right">'+(lEd==p.id?'':'<button class="btn sm" onclick="lEd=\''+p.id+'\';lErr=\'\';draw()">Ndrysho</button>')+'</td></tr>'+(lEd==p.id?lEditRow(p,a):'')}).join("");
+    h+='<div class="scroll"><table><tr><th>Emri</th><th>Vjetor</th><th>Mjekësor</th><th>Të tjera</th><th>Extra</th><th>Llogaria</th><th></th></tr>'+rows+'</table></div><p class="mut" style="font-size:12px;margin-top:8px">Ditët = Excel + pushimet e miratuara në aplikacion (pas lidhjes me llogarinë).</p>'}
   return h+'</div>';
 }
 async function doLeaveImport(){
