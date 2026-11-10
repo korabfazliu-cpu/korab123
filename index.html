@@ -440,7 +440,8 @@ function linkCard(){
 async function linkP(id,uid){const r=await sb.from("schedule_people").update({user_id:uid||null}).eq("id",id);if(r.error)alert(/duplicate|unique/i.test(r.error.message)?"Kjo llogari është lidhur tashmë me një emër tjetër.":r.error.message);await loadSched();draw()}
 function loadXLSX(){return window.XLSX?Promise.resolve():new Promise((ok,no)=>{const s=document.createElement("script");s.src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js";s.onload=ok;s.onerror=()=>no(new Error("Leximi i Excel-it nuk u ngarkua."));document.head.appendChild(s)})}
 const serial=n=>{const d=new Date(Math.round((n-25569)*864e5));return d.getUTCFullYear()+"-"+String(d.getUTCMonth()+1).padStart(2,"0")+"-"+String(d.getUTCDate()).padStart(2,"0")};
-function parseDay(v){if(typeof v=="number"&&v>20000&&v<80000)return serial(v);if(v instanceof Date)return ds(v);const m=String(v||"").trim().match(/^(\d{1,2})[./-](\d{1,2})[./-](\d{4})$/);return m?m[3]+"-"+m[2].padStart(2,"0")+"-"+m[1].padStart(2,"0"):null}
+function parseDay(v){if(typeof v=="number"&&v>20000&&v<80000)return serial(v);if(v instanceof Date)return ds(v);const iso=String(v||"").trim().match(/^(\d{4})-(\d{2})-(\d{2})/);if(iso)return iso[1]+"-"+iso[2]+"-"+iso[3];const m=String(v||"").trim().match(/^(\d{1,2})[./-](\d{1,2})[./-](\d{4})$/);return m?m[3]+"-"+m[2].padStart(2,"0")+"-"+m[1].padStart(2,"0"):null}
+const norm=s=>String(s||"").toLowerCase().replace(/ë/g,"e").replace(/ç/g,"c").replace(/\s+/g," ").trim();
 function parseSheet(wb){
   const ws=wb.Sheets[wb.SheetNames[0]],g=XLSX.utils.sheet_to_json(ws,{header:1,raw:true,defval:null}),deptRows=new Set();
   (ws["!merges"]||[]).forEach(m=>{const v=(g[m.s.r]||[])[m.s.c];if(m.s.c==0&&m.e.c-m.s.c>=10)deptRows.add(m.s.r);for(let r=m.s.r;r<=m.e.r;r++){g[r]=g[r]||[];for(let c=m.s.c;c<=m.e.c;c++)g[r][c]=v}});
@@ -448,15 +449,22 @@ function parseSheet(wb){
   if(hr<0)throw new Error("Nuk u gjet rreshti me \"Emri\" dhe datat.");
   const cols=[];(g[hr]||[]).forEach((v,j)=>{if(j>0){const x=parseDay(v);if(x)cols.push([j,x])}});
   if(!cols.length)throw new Error("Nuk u gjetën datat në rreshtin e titullit.");
-  const people=new Map(),entries=[],extraRaw=[];let dept="Pa seksion",prev=dept,seen=true;
+  const people=new Map(),entries=[],extraRaw=[],noTitles=!deptRows.size;let dept=noTitles?"#0":"Pa seksion",prev=dept,seen=true,grp=0;
   for(let i=hr+1;i<g.length;i++){const r=g[i]||[],nm=String(r[0]||"").trim();if(!nm)continue;
     if(deptRows.has(i)){prev=dept;dept=nm;seen=false;continue}
     // An "Extra" row right under a section title (before its people) belongs to the section above it.
-    if(nm.toLowerCase()=="extra"){const dp=seen?dept:prev;cols.forEach(([j,x])=>{const v=r[j];if(v!=null&&String(v).trim())extraRaw.push([x,dp,String(v).trim()])});continue}
-    seen=true;people.set(nm,1);cols.forEach(([j,x])=>{const v=r[j];if(v!=null&&String(v).trim())entries.push({day:x,dept,name:nm,value:String(v).trim()})})}
+    if(nm.toLowerCase()=="extra"){const dp=seen?dept:prev;cols.forEach(([j,x])=>{const v=r[j];if(v!=null&&String(v).trim())extraRaw.push([x,dp,String(v).trim()])});if(noTitles){prev=dept;dept="#"+(++grp);seen=false}continue}
+    seen=true;
+    // The same person listed again in another section: those shifts are extra work there.
+    if(people.has(nm)&&people.get(nm)!==dept){cols.forEach(([j,x])=>{const v=r[j];if(v!=null&&String(v).trim())extraRaw.push([x,dept,nm+" "+String(v).trim(),nm])});continue}
+    if(!people.has(nm))people.set(nm,dept);cols.forEach(([j,x])=>{const v=r[j];if(v!=null&&String(v).trim())entries.push({day:x,dept,name:nm,value:String(v).trim()})})}
   const names=[...people.keys()];
   const match=n=>{const l=n.toLowerCase(),ex=names.filter(p=>p.toLowerCase()==l);if(ex.length)return ex[0];const c=names.filter(p=>p.toLowerCase().split(/\s+/).includes(l));return c.length==1?c[0]:null};
-  const extras=extraRaw.map(([x,dp,t])=>{const m=t.match(/^(.*?)\s+(\d{1,2}\s*-\s*\d{1,2}\*?)$/),n=m?m[1].trim():t;return {day:x,dept:dp,name:match(n),label:n,value:m?m[2].replace(/\s/g,""):t}});
+  const extras=extraRaw.map(([x,dp,t,own])=>{const m=t.match(/^(.*?)\s+(\d{1,2}\s*-\s*\d{1,2}\*?)$/),n=own||(m?m[1].trim():t);return {day:x,dept:dp,name:own||match(n),label:n,value:m?m[2].replace(/\s/g,""):t}});
+  // A file without section titles: groups end at each "Extra" row; name each group from its people's position.
+  if(noTitles){const dn={},secOf=pos=>{const s=norm(pos);return /cashier|kasier/.test(s)?"Cashier":/park$/.test(s)?"Park":/pastrim/.test(s)?"Pastrim":/mirembajt/.test(s)?"Mirembajtje":null};
+    entries.forEach(e=>{if(dn[e.dept])return;const p=findP(e.name),s=p&&secOf(p.position);if(s&&!Object.values(dn).includes(s))dn[e.dept]=s});
+    const nmOf=g=>dn[g]||("Grupi "+(+g.slice(1)+1));entries.forEach(e=>e.dept=nmOf(e.dept));extras.forEach(e=>e.dept=nmOf(e.dept))}
   const months=[...new Set(cols.map(c=>c[1].slice(0,7)))];
   return {names,entries,extras,months,from:cols[0][1],to:cols[cols.length-1][1]};
 }
