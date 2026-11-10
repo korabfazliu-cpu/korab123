@@ -89,6 +89,7 @@ main.wrap{position:relative;margin-top:-64px;padding-bottom:20px;display:flex;fl
 .ovrow{display:flex;gap:12px;align-items:center;justify-content:space-between;flex-wrap:wrap;padding:9px 0;border-bottom:1px solid var(--bd);font-size:13px}
 .ovrow>span:first-of-type{flex:1}.ovrow.tot{border-bottom:0;font-size:15px}
 tr.arm td{background:#FFF8F7}
+.conf{margin-top:14px;padding:14px 16px;border-radius:16px;background:#FFF6E5;border:1px solid #FFD58A;font-size:14px}.conf.ok{background:#EAF7EF;border-color:#9ED9B4}.warn.rem{align-items:center;flex-wrap:wrap;margin-bottom:16px}.warn.rem span{flex:1;min-width:220px}
 .ntf{border:2px solid var(--blue)}.ntfi{padding:12px 0;border-top:1px solid var(--bd)}.ntfi:first-of-type{border-top:0;padding-top:4px}.ntfi b{display:block}.ntfi p{margin:8px 0 10px;font-size:14px;line-height:1.5}
 .sgt tr.mine td{background:#EEF3FF}.sgt tr.mine td:first-child{border-radius:10px 0 0 10px}.sgt tr.mine td:last-child{border-radius:0 10px 10px 0}.sgt tr.mine .nm{color:var(--blue);font-weight:800;background:#EEF3FF;box-shadow:-18px 0 0 #EEF3FF}.chip.minec{outline:2px solid var(--blue)}
 .mates{display:block;font-size:10.5px;line-height:1.3;color:var(--mut);margin-top:4px;word-break:break-word}
@@ -243,7 +244,7 @@ const logoBlock=h=>'<span class="logo"><img src="'+LOGO+'" alt="038 Parking Cent
 const FOOT='<p class="foot">© 038 Parking Center · Prishtinë</p>';
 const CIRC=n=>Array.from({length:n},(_,i)=>'<span class="circ c'+(i+1)+'" aria-hidden="true"></span>').join("");
 const authPage=(card,below)=>'<div class="ap">'+CIRC(3)+'<div class="apin">'+logoBlock(56)+'<h1 style="margin-top:34px">Digital HR</h1><div class="card">'+card+'</div>'+(below||'')+'<p class="foot">© 038 Parking Center · Prishtinë</p></div></div>';
-let openS={hist:false,bal:false,hol:false,acc:false,rep:false},fKeep={},ltype="",menu=false,sub=null,session=null,me=null,mode="in",tab="me",myAbs=[],profs=[],allAbs=[],armed=null,msg="",q="",flash="",recovering=false,editing=null,opening=[],limp=null,sched={people:[],entries:[]},smonth=today().slice(0,7),sedit=null,imp=null,showSec=false;
+let openS={hist:false,bal:false,hol:false,acc:false,rep:false,slip:false},fKeep={},ltype="",menu=false,sub=null,session=null,me=null,mode="in",tab="me",myAbs=[],profs=[],allAbs=[],armed=null,msg="",q="",flash="",recovering=false,editing=null,opening=[],limp=null,sched={people:[],entries:[]},smonth=today().slice(0,7),sedit=null,imp=null,showSec=false;
 
 sb.auth.onAuthStateChange((ev,s)=>{
   if(ev=="TOKEN_REFRESHED")return;
@@ -259,10 +260,11 @@ async function load(){
   if(me&&me.status=="approved"){
     const a=await sb.from("absences").select("*").eq("user_id",uid).order("from_date",{ascending:false});
     myAbs=a.data||[];
+    try{const ss=await sb.from("payroll_slips").select("*").eq("user_id",uid).order("year",{ascending:false}).order("month",{ascending:false});slips=ss.data||[]}catch(e){slips=[]}
     try{const nn=await sb.from("notifications").select("*").eq("user_id",uid).order("created_at",{ascending:false});notes=(nn.data||[]).slice(0,20)}catch(e){notes=[]}
     if(me.role=="admin"){
       const [p,b]=await Promise.all([sb.from("profiles").select("*").order("full_name"),sb.from("absences").select("*").order("from_date",{ascending:false})]);
-      profs=p.data||[];allAbs=b.data||[];loadEmails();
+      profs=p.data||[];allAbs=b.data||[];loadEmails();await loadCurConf();
       if(tab=="me"&&!window.__adminSeen){tab=profs.some(x=>x.status=="pending")?"req":"ov";window.__adminSeen=1}
     }
     await loadSched();
@@ -289,7 +291,7 @@ function draw(){
     return app.innerHTML=authPage('<h2>'+(me.status=="pending"?"Llogaria pret miratimin":"Llogaria u refuzua")+'</h2><p class="mut">'+(me.status=="pending"?"Administratori duhet ta miratojë llogarinë tuaj para se të hyni. Kthehuni më vonë.":"Administratori nuk e miratoi këtë llogari. Kontaktoni menaxherin.")+'</p><div style="display:flex;gap:8px;margin-top:18px"><button class="btn p" onclick="load()">Rifresko</button><button class="btn" onclick="out()">Dil</button></div>');
   }
   const adm=me.role=="admin",prevS=[...document.querySelectorAll(".sg")].map(e=>e.scrollLeft);
-  app.innerHTML=shell(adm&&tab=="req"?reqView():adm&&tab=="staff"?staffView():adm&&tab=="sched"?schedView(true):adm&&tab=="pay"?payView():adm&&tab=="ov"?ovView():notifCard()+meView());
+  app.innerHTML=shell(adm&&tab=="req"?reqView():adm&&tab=="staff"?staffView():adm&&tab=="sched"?schedView(true):adm&&tab=="pay"?payView():adm&&tab=="ov"?ovView():notifCard()+meView()+slipCard());
   if($("#from")){$("#from").value=keep.f||"";$("#to").value=keep.t||"";$("#note").value=keep.n||"";$("#shift").value=keep.s||"";if(keep.d){$("#days").value=keep.d;calc(1)}else calc()}
   sgFocus(prevS);
 }
@@ -524,7 +526,7 @@ async function leavePick(inp){
   catch(e){limp={error:e.message||String(e)}}
   draw();
 }
-let lEd=null,lErr="",notes=[];
+let lEd=null,lErr="",notes=[],slips=[];
 const LTYPES=["vjetor","mjekesor","martese","vdekje","lindje","gjak","papagese","extra"];
 // Admin correction of a person's starting balance for the year (days already used before / outside the app).
 let aEd=null;
@@ -555,6 +557,11 @@ async function lSave(pid){
     if(nr.error)alert("Ndryshimet u ruajtën, por njoftimi nuk u dërgua: "+nr.error.message);
   }
   lEd=null;aEd=null;lErr="";await loadSched();draw();
+}
+function slipCard(){
+  if(!slips.length)return "";
+  return '<div class="card">'+togH("slip","Pagat e mia",slips.length)+(openS.slip?slips.map(s=>{const x=s.data||{};
+    return '<div class="ovrow"><span><b>'+MON_GEN[s.month-1][0].toUpperCase()+MON_GEN[s.month-1].slice(1)+' '+s.year+'</b><div class="mut" style="font-size:12px">'+(x.monthly!=null?'Paga bazë '+eur(x.base_pay):'Part time · '+x.work_days+' ditë')+(x.extra_days?' · extra '+x.extra_days+' ditë +'+eur(x.extra_pay):'')+(x.holiday_days?' · festa +'+eur(x.holiday_pay):'')+(+x.unpaid_pay?' · mjekësor pa pagesë −'+eur(x.unpaid_pay):'')+(+x.adj_amount?' · ndryshim '+(x.adj_amount>0?'+':'−')+eur(Math.abs(x.adj_amount)):'')+'</div></span><b>'+eur(s.total)+'</b></div>'}).join(""):'')+'</div>';
 }
 function notifCard(){
   const un=notes.filter(n=>!n.read_at);if(!un.length)return "";
@@ -698,33 +705,74 @@ async function openDoc(p){
   if(error||!data){if(w)w.close();alert("Dëshmia nuk u hap.");return}
   if(w)w.location=data.signedUrl;else location.href=data.signedUrl;
 }
-let pmon=new Date().toISOString().slice(0,7),pay=null,payErr="",payEd=false,hols=[];
+let pmon=new Date().toISOString().slice(0,7),pay=null,payErr="",payEd=false,hols=[],payConf=null,payAdj=[],adjFor=null,confArm=false,payMsg="",curConf=undefined;
 const eur=v=>v==null?"—":(+v).toLocaleString("de-DE",{minimumFractionDigits:2,maximumFractionDigits:2})+" €";
 async function loadPay(){
   pay=null;payErr="";draw();
   const [y,m]=pmon.split("-").map(Number);
   try{
-    const [r,h]=await Promise.all([sb.rpc("payroll_month",{p_year:y,p_month:m}),sb.from("holidays").select("*").order("day")]);
-    if(r.error)throw r.error;pay=r.data||[];hols=h.data||[];
+    const [r,h,c,a]=await Promise.all([sb.rpc("payroll_month",{p_year:y,p_month:m}),sb.from("holidays").select("*").order("day"),sb.from("payroll_confirm").select("*").eq("year",y).eq("month",m).maybeSingle(),sb.from("payroll_adjust").select("*").eq("year",y).eq("month",m).order("created_at")]);
+    if(r.error)throw r.error;pay=r.data||[];hols=h.data||[];payConf=(c&&c.data)||null;payAdj=(a&&a.data)||[];
   }catch(e){payErr="Pagat nuk u llogaritën: "+(e.message||e)}
   if(tab=="pay")draw();
 }
+const MON_GEN=["janar","shkurt","mars","prill","maj","qershor","korrik","gusht","shtator","tetor","nëntor","dhjetor"];
+const lastDay=ym=>{const [y,m]=ym.split("-").map(Number);return new Date(Date.UTC(y,m,0)).toISOString().slice(0,10)};
+// 2 days before the end of the month: ask the admin to check and confirm the list.
+function payDue(){const t=today(),ym=t.slice(0,7);return t>=addD(lastDay(ym),-2)}
+function payReminder(){
+  const ym=today().slice(0,7);
+  if(!payDue()||curConf)return "";
+  return '<div class="warn rem">'+I.warn+'<span><b>Lista e pagave për '+MON_GEN[+ym.slice(5)-1]+' '+ym.slice(0,4)+'.</b> A ka ndryshime në paga apo vlen kalkulimi i platformës? Kontrolloni listën dhe konfirmojeni; pas konfirmimit secili punëtor merr njoftim për pagën e vet.</span><button class="btn p sm" onclick="pmon=\''+ym+'\';go(\'pay\')">Kontrollo dhe konfirmo</button></div>';
+}
+async function loadCurConf(){try{const t=today(),r=await sb.from("payroll_confirm").select("*").eq("year",+t.slice(0,4)).eq("month",+t.slice(5,7)).maybeSingle();curConf=(r&&r.data)||null}catch(e){curConf=null}}
+function confBlock(){
+  const ml=MON_GEN[+pmon.slice(5)-1]+" "+pmon.slice(0,4),linked=pay.filter(r=>!r.missing_base&&sched.people.some(p=>p.id==r.person_id&&p.user_id)).length;
+  let h='<div class="conf'+(payConf?' ok':'')+'">';
+  if(payMsg)h+='<div class="info" style="margin:0 0 10px"><span>'+esc(payMsg)+'</span></div>';
+  h+=payConf?'<p style="margin:0 0 8px"><b>✓ Lista e pagave për '+ml+' është konfirmuar</b> më '+fmt(payConf.confirmed_at.slice(0,10))+(payConf.times>1?' ('+payConf.times+' herë)':'')+'. Nëse ndryshoni diçka, rikonfirmojeni që stafi të marrë pagën e përditësuar.</p>'
+    :'<p style="margin:0 0 8px"><b>A ka ndryshime në paga apo vlen kalkulimi i platformës?</b> Shtoni ndryshimet me "+/−" te punëtori, pastaj konfirmoni listën. Pas konfirmimit, '+linked+' punëtorë me llogari të lidhur marrin secili njoftim me pagën e vet.</p>';
+  h+=confArm?'<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center"><span>Konfirmoni listën e '+ml+' (gjithsej '+eur(pay.reduce((s,r)=>s+(+r.total||0),0))+') dhe njoftoni stafin?</span><button class="btn p" id="cgo" onclick="confirmPay()">Po, konfirmo</button><button class="btn" onclick="confArm=false;draw()">Anulo</button></div>'
+    :'<button class="btn p" onclick="confArm=true;payMsg=\'\';draw()">'+(payConf?'Rikonfirmo dhe njofto stafin':'Konfirmo listën e pagave')+'</button>';
+  return h+'</div>';
+}
+async function confirmPay(){
+  const b=$("#cgo");if(b)b.disabled=true;const [y,m]=pmon.split("-").map(Number);
+  const {data,error}=await sb.rpc("confirm_payroll",{p_year:y,p_month:m});
+  confArm=false;payMsg=error?"Konfirmimi dështoi: "+error.message:"Lista u konfirmua. "+data+" fletë pagash u ruajtën dhe stafi me llogari të lidhur u njoftua.";
+  if(!error&&pmon==today().slice(0,7))curConf={};
+  await loadPay();
+}
+function adjRow(r){
+  const L=payAdj.filter(a=>a.person_id==r.person_id);
+  return '<tr class="arm"><td colspan="8"><b>Ndryshim në pagën e '+esc(r.name)+'</b>'+(L.length?'<div style="margin:8px 0">'+L.map(a=>'<div class="ovrow"><span>'+esc(a.note)+'</span><b>'+(a.amount>0?'+':'−')+eur(Math.abs(a.amount))+'</b><button class="btn sm" onclick="delAdj(\''+a.id+'\')">Fshi</button></div>').join("")+'</div>':'')+'<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px;align-items:center"><input id="adja" type="number" step="0.01" placeholder="Shuma €, p.sh. 50 ose -20" style="width:200px;margin:0"><input id="adjn" maxlength="200" placeholder="Arsyeja (p.sh. bonus, avans)" style="flex:1;min-width:180px;margin:0"><button class="btn p sm" onclick="addAdj(\''+r.person_id+'\')">Shto</button></div><p class="err" id="adjerr"></p></td></tr>';
+}
+async function addAdj(pid){
+  const a=+$("#adja").value,n=$("#adjn").value.trim(),er=$("#adjerr");er.textContent="";
+  if(!a){er.textContent="Shkruani shumën (pozitive për shtesë, negative për zbritje).";return}
+  if(!n){er.textContent="Shkruani arsyen.";return}
+  const [y,m]=pmon.split("-").map(Number),{error}=await sb.from("payroll_adjust").insert({person_id:pid,year:y,month:m,amount:a,note:n});
+  if(error){er.textContent="Nuk u ruajt: "+error.message;return}
+  payMsg=payConf?"Ndryshimi u ruajt. Rikonfirmoni listën që stafi të marrë pagën e përditësuar.":"";await loadPay();
+}
+async function delAdj(id){const {error}=await sb.from("payroll_adjust").delete().eq("id",id);if(error){alert(error.message);return}payMsg=payConf?"Ndryshimi u fshi. Rikonfirmoni listën që stafi të marrë pagën e përditësuar.":"";await loadPay()}
 function payView(){
   const y=pmon.slice(0,4);
-  let h='<div class="card"><div class="hd"><h2>Pagat</h2><div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center"><input type="month" id="pm" value="'+pmon+'" onchange="if(this.value){pmon=this.value;loadPay()}" style="width:auto;margin:0"><button class="btn ol sm" onclick="payCsv()"'+(pay&&pay.length?'':' disabled')+'>Shkarko Excel</button><button class="btn sm" onclick="payEd=!payEd;draw()">'+(payEd?"Mbyll ndryshimin":"Ndrysho pagat bazë")+'</button></div></div>';
+  let h=payReminder()+'<div class="card"><div class="hd"><h2>Pagat</h2><div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center"><input type="month" id="pm" value="'+pmon+'" onchange="if(this.value){pmon=this.value;loadPay()}" style="width:auto;margin:0"><button class="btn ol sm" onclick="payCsv()"'+(pay&&pay.length?'':' disabled')+'>Shkarko Excel</button><button class="btn sm" onclick="payEd=!payEd;draw()">'+(payEd?"Mbyll ndryshimin":"Ndrysho pagat bazë")+'</button></div></div>';
   h+='<p class="mut" style="font-size:13px;margin:-4px 0 12px">Paga ditore = paga bazë / 22. Totali = paga bazë + ditët extra × paga ditore + festat zyrtare në orar × paga ditore − ditët mjekësore pa pagesë × paga ditore. Part time: ditët e punës × paga ditore.</p>';
   if(payErr)h+='<p class="err">'+esc(payErr)+'</p>';
   else if(!pay)h+='<p class="mut">Duke llogaritur…</p>';
   else if(!pay.length)h+='<p class="mut">Nuk ka punonjës në listë.</p>';
   else{
     const sum=k=>pay.reduce((s,r)=>s+(+r[k]||0),0);
-    h+='<div class="scroll"><table class="pay"><tr><th>Emri</th><th>Paga bazë</th><th>Ditë pune</th><th>Punë extra</th><th>Festa zyrtare</th><th>Zbritje</th><th>Totali</th></tr>';
+    h+='<div class="scroll"><table class="pay"><tr><th>Emri</th><th>Paga bazë</th><th>Ditë pune</th><th>Punë extra</th><th>Festa zyrtare</th><th>Zbritje</th><th>Ndryshim</th><th>Totali</th></tr>';
     h+=pay.map(r=>{
       const base=payEd?'<div style="display:flex;gap:6px;min-width:190px"><input id="pmo_'+r.person_id+'" type="number" min="0" step="0.01" placeholder="Mujore €" value="'+(r.monthly??"")+'" style="margin:0;padding:8px 10px"><input id="pda_'+r.person_id+'" type="number" min="0" step="0.01" placeholder="Ditore € (part time)" value="'+(r.monthly==null&&r.daily_rate!=null?r.daily_rate:"")+'" style="margin:0;padding:8px 10px"></div>'
         :r.missing_base?'<span class="badge w">Mungon paga</span>':r.monthly!=null?eur(r.monthly):'<span class="badge t">Part time</span>';
-      return '<tr><td><b>'+esc(r.name)+'</b>'+(r.position?'<div class="mut" style="font-size:12px">'+esc(r.position)+'</div>':'')+'</td><td>'+base+(r.daily_rate!=null&&!payEd?'<div class="mut" style="font-size:12px">'+eur(r.daily_rate)+' / ditë</div>':'')+'</td><td>'+r.work_days+'</td><td>'+(r.extra_days?r.extra_days+' ditë<div class="mut" style="font-size:12px">+'+eur(r.extra_pay)+'</div>':'—')+'</td><td'+(r.holiday_list?' title="'+esc(r.holiday_list)+'"':'')+'>'+(r.holiday_days?r.holiday_days+' ditë<div class="mut" style="font-size:12px">+'+eur(r.holiday_pay)+'</div>':'—')+'</td><td>'+(r.unpaid_days?'<span style="color:var(--bad)">'+r.unpaid_days+' ditë</span><div class="mut" style="font-size:12px">−'+eur(r.unpaid_pay)+'</div>':'—')+'</td><td><b>'+eur(r.total)+'</b></td></tr>'}).join("");
-    h+='<tr class="tot"><td><b>Gjithsej</b></td><td>'+eur(sum("base_pay"))+'</td><td></td><td>'+eur(sum("extra_pay"))+'</td><td>'+eur(sum("holiday_pay"))+'</td><td>'+(sum("unpaid_pay")?'−'+eur(sum("unpaid_pay")):'')+'</td><td><b>'+eur(sum("total"))+'</b></td></tr></table></div>';
+      return '<tr><td><b>'+esc(r.name)+'</b>'+(r.position?'<div class="mut" style="font-size:12px">'+esc(r.position)+'</div>':'')+'</td><td>'+base+(r.daily_rate!=null&&!payEd?'<div class="mut" style="font-size:12px">'+eur(r.daily_rate)+' / ditë</div>':'')+'</td><td>'+r.work_days+'</td><td>'+(r.extra_days?r.extra_days+' ditë<div class="mut" style="font-size:12px">+'+eur(r.extra_pay)+'</div>':'—')+'</td><td'+(r.holiday_list?' title="'+esc(r.holiday_list)+'"':'')+'>'+(r.holiday_days?r.holiday_days+' ditë<div class="mut" style="font-size:12px">+'+eur(r.holiday_pay)+'</div>':'—')+'</td><td>'+(r.unpaid_days?'<span style="color:var(--bad)">'+r.unpaid_days+' ditë</span><div class="mut" style="font-size:12px">−'+eur(r.unpaid_pay)+'</div>':'—')+'</td><td>'+(+r.adj_amount?'<span style="color:'+(r.adj_amount>0?'var(--ok,#0A7A3E)':'var(--bad)')+'">'+(r.adj_amount>0?'+':'−')+eur(Math.abs(r.adj_amount))+'</span><div class="mut" style="font-size:11px;max-width:160px;white-space:normal">'+esc(r.adj_note||'')+'</div>':'')+'<button class="btn sm" style="margin-top:4px" onclick="adjFor=adjFor==\''+r.person_id+'\'?null:\''+r.person_id+'\';draw()">'+(adjFor==r.person_id?'Mbyll':'+/−')+'</button></td><td><b>'+eur(r.total)+'</b></td></tr>'+(adjFor==r.person_id?adjRow(r):'')}).join("");
+    h+='<tr class="tot"><td><b>Gjithsej</b></td><td>'+eur(sum("base_pay"))+'</td><td></td><td>'+eur(sum("extra_pay"))+'</td><td>'+eur(sum("holiday_pay"))+'</td><td>'+(sum("unpaid_pay")?'−'+eur(sum("unpaid_pay")):'')+'</td><td>'+(sum("adj_amount")?(sum("adj_amount")>0?'+':'−')+eur(Math.abs(sum("adj_amount"))):'')+'</td><td><b>'+eur(sum("total"))+'</b></td></tr></table></div>';
     if(payEd)h+='<p class="err" id="perr"></p><div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn p" id="pgo" onclick="savePay()">Ruaj pagat</button><button class="btn" onclick="payEd=false;draw()">Anulo</button></div>';
+    h+=confBlock();
     h+='<p class="mut" style="font-size:12px;margin-top:8px">Ditët merren nga orari: ditët extra janë ato të shënuara si extra në orar ose kërkesat "Punë extra" të miratuara.</p>';
   }
   h+='</div>';
@@ -760,9 +808,9 @@ async function delHol(d){
 }
 function payCsv(){
   const qq=v=>'"'+String(v==null?"":v).replace(/"/g,'""')+'"',n=v=>v==null?"":(+v).toFixed(2).replace(".",",");
-  let c="Emri;Pozita;Paga bazë;Paga ditore;Ditë pune;Ditë extra;Festa;Festat;Shtesa extra;Shtesa festash;Ditë mjekësore pa pagesë;Zbritje;Totali\n";
-  pay.forEach(r=>{c+=[qq(r.name),qq(r.position),r.monthly==null?qq("Part time"):n(r.monthly),n(r.daily_rate),r.work_days,r.extra_days,r.holiday_days,qq(r.holiday_list),n(r.extra_pay),n(r.holiday_pay),r.unpaid_days||0,n(r.unpaid_pay),n(r.total)].join(";")+"\n"});
-  c+=[qq("Gjithsej"),"",n(pay.reduce((s,r)=>s+(+r.base_pay||0),0)),"","","","","",n(pay.reduce((s,r)=>s+(+r.extra_pay||0),0)),n(pay.reduce((s,r)=>s+(+r.holiday_pay||0),0)),"",n(pay.reduce((s,r)=>s+(+r.unpaid_pay||0),0)),n(pay.reduce((s,r)=>s+(+r.total||0),0))].join(";")+"\n";
+  let c="Emri;Pozita;Paga bazë;Paga ditore;Ditë pune;Ditë extra;Festa;Festat;Shtesa extra;Shtesa festash;Ditë mjekësore pa pagesë;Zbritje;Ndryshim;Arsyeja;Totali\n";
+  pay.forEach(r=>{c+=[qq(r.name),qq(r.position),r.monthly==null?qq("Part time"):n(r.monthly),n(r.daily_rate),r.work_days,r.extra_days,r.holiday_days,qq(r.holiday_list),n(r.extra_pay),n(r.holiday_pay),r.unpaid_days||0,n(r.unpaid_pay),n(r.adj_amount),qq(r.adj_note),n(r.total)].join(";")+"\n"});
+  c+=[qq("Gjithsej"),"",n(pay.reduce((s,r)=>s+(+r.base_pay||0),0)),"","","","","",n(pay.reduce((s,r)=>s+(+r.extra_pay||0),0)),n(pay.reduce((s,r)=>s+(+r.holiday_pay||0),0)),"",n(pay.reduce((s,r)=>s+(+r.unpaid_pay||0),0)),n(pay.reduce((s,r)=>s+(+r.adj_amount||0),0)),"",n(pay.reduce((s,r)=>s+(+r.total||0),0))].join(";")+"\n";
   const a=document.createElement("a");a.href=URL.createObjectURL(new Blob(["\ufeff"+c],{type:"text/csv"}));a.download="pagat-"+pmon+".csv";a.click();
 }
 let ovm=today().slice(0,7),ov=null,ovErr="",ovBusy=false,ovSel=null;
@@ -798,7 +846,7 @@ function ovPerson(p){
 }
 function ovView(){
   if(!ov&&!ovErr&&!ovBusy){loadOv();return '<div class="card"><p class="mut">Duke ngarkuar pasqyrën…</p></div>'}
-  let h='<div class="card"><div class="hd"><div><h2 style="margin:0">Pasqyra e muajit</h2><p class="mut" style="font-size:13px;margin-top:4px">Oraret, ditët extra, pushimet, festat dhe pagat e të gjithë stafit në një vend.</p></div><div class="mnav"><button class="btn sm" aria-label="Muaji paraprak" onclick="ovShift(-1)">‹</button><b>'+mLabel(ovm)+'</b><button class="btn sm" aria-label="Muaji tjetër" onclick="ovShift(1)">›</button></div></div></div>';
+  let h=payReminder()+'<div class="card"><div class="hd"><div><h2 style="margin:0">Pasqyra e muajit</h2><p class="mut" style="font-size:13px;margin-top:4px">Oraret, ditët extra, pushimet, festat dhe pagat e të gjithë stafit në një vend.</p></div><div class="mnav"><button class="btn sm" aria-label="Muaji paraprak" onclick="ovShift(-1)">‹</button><b>'+mLabel(ovm)+'</b><button class="btn sm" aria-label="Muaji tjetër" onclick="ovShift(1)">›</button></div></div></div>';
   if(ovErr)return h+'<div class="card"><p class="err">'+esc(ovErr)+'</p><button class="btn" onclick="loadOv()">Provo sërish</button></div>';
   if(!ov)return h+'<div class="card"><p class="mut">Duke ngarkuar…</p></div>';
   const P=sched.people.slice().sort((a,b)=>(a.position||"~").localeCompare(b.position||"~")||a.name.localeCompare(b.name)),D=P.map(p=>({p,x:ovPerson(p)}));
