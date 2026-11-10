@@ -89,6 +89,7 @@ main.wrap{position:relative;margin-top:-64px;padding-bottom:20px;display:flex;fl
 .ovrow{display:flex;gap:12px;align-items:center;justify-content:space-between;flex-wrap:wrap;padding:9px 0;border-bottom:1px solid var(--bd);font-size:13px}
 .ovrow>span:first-of-type{flex:1}.ovrow.tot{border-bottom:0;font-size:15px}
 tr.arm td{background:#FFF8F7}
+.sgt .nm,.ovt .nm{box-shadow:-18px 0 0 #fff}
 .hd{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:12px}
 .hd h2{margin:0}
 .big{display:flex;gap:18px;align-items:center;border-radius:24px;padding:20px;box-shadow:0 14px 32px rgba(0,36,106,.14)}
@@ -277,11 +278,23 @@ function draw(){
   if(me.status!="approved"){
     return app.innerHTML=authPage('<h2>'+(me.status=="pending"?"Llogaria pret miratimin":"Llogaria u refuzua")+'</h2><p class="mut">'+(me.status=="pending"?"Administratori duhet ta miratojë llogarinë tuaj para se të hyni. Kthehuni më vonë.":"Administratori nuk e miratoi këtë llogari. Kontaktoni menaxherin.")+'</p><div style="display:flex;gap:8px;margin-top:18px"><button class="btn p" onclick="load()">Rifresko</button><button class="btn" onclick="out()">Dil</button></div>');
   }
-  const adm=me.role=="admin";
+  const adm=me.role=="admin",prevS=[...document.querySelectorAll(".sg")].map(e=>e.scrollLeft);
   app.innerHTML=shell(adm&&tab=="req"?reqView():adm&&tab=="staff"?staffView():adm&&tab=="sched"?schedView(true):adm&&tab=="pay"?payView():adm&&tab=="ov"?ovView():meView());
   if($("#from")){$("#from").value=keep.f||"";$("#to").value=keep.t||"";$("#note").value=keep.n||"";$("#shift").value=keep.s||"";if(keep.d){$("#days").value=keep.d;calc(1)}else calc()}
+  sgFocus(prevS);
 }
-const go=t=>{tab=t;menu=false;sedit=null;if(t=="pay")loadPay();else if(t=="ov")loadOv();else draw()};
+// Calendars open on today's column; while staying in the same view and month, keep the user's scroll.
+async function toggleSec(){showSec=!showSec;const cm=today().slice(0,7);if(showSec&&smonth!=cm){smonth=cm;await loadSched()}draw()}
+let sgKey=null;
+function sgFocus(prevS){
+  const g=[...document.querySelectorAll(".sg")],k=tab+"|"+(tab=="ov"?ovm:smonth)+"|"+showSec+"|"+g.length;
+  if(!g.length){sgKey=null;return}
+  if(k==sgKey&&prevS.length==g.length){g.forEach((e,i)=>e.scrollLeft=prevS[i]);return}
+  sgKey=k;
+  requestAnimationFrame(()=>g.forEach(e=>{const th=e.querySelector("th.today");if(!th)return;const nm=e.querySelector("th.nm"),stick=[...e.querySelectorAll("tr:first-child th")].filter(x=>getComputedStyle(x).position=="sticky").reduce((s,x)=>s+x.offsetWidth,0)||(nm?nm.offsetWidth:0);
+    e.scrollLeft+=th.getBoundingClientRect().left-e.getBoundingClientRect().left-stick-th.offsetWidth-6}));
+}
+const go=async t=>{tab=t;menu=false;sedit=null;const cm=today().slice(0,7);if(t=="pay")return loadPay();if(t=="ov"){ovm=cm;return loadOv()}if(t=="sched"&&smonth!=cm){smonth=cm;await loadSched()}draw()};
 
 function authView(){
   const su=mode=="up",fg=mode=="forgot",ent=' onkeydown="if(event.key==\'Enter\')$(\'#sub\').click()"';
@@ -401,7 +414,7 @@ function mySchedCard(){
   if(!me2)return '<div class="card"><h2>Orari im</h2><p class="mut" style="font-size:14px">Orari juaj ende nuk është lidhur me llogarinë. Administratori do ta lidhë së shpejti.</p></div>';
   const t=today(),d7=Array.from({length:7},(_,i)=>addD(t,i));
   const mine=x=>sched.entries.filter(e=>e.day==x&&e.person_id==me2.id);
-  let h='<div class="card"><div class="hd"><h2>Orari im</h2><button class="btn sm" onclick="showSec=!showSec;draw()">'+(showSec?"Mbyll orarin e seksionit":"Orari i seksionit")+'</button></div><div class="days7">'+d7.map(x=>{const m=mine(x);return '<div class="'+(x==t?"td":"")+'"><small>'+(x==t?"Sot":wd(x))+'</small><b>'+(+x.slice(8))+'.'+x.slice(5,7)+'</b>'+(m.length?m.map(e=>'<span class="sc '+sCls(e.value)+'">'+esc(sTxt(e.value))+(e.is_extra?" (extra)":"")+'</span>').join(""):'<span class="sc se">—</span>')+'</div>'}).join("")+'</div></div>';
+  let h='<div class="card"><div class="hd"><h2>Orari im</h2><button class="btn sm" onclick="toggleSec()">'+(showSec?"Mbyll orarin e seksionit":"Orari i seksionit")+'</button></div><div class="days7">'+d7.map(x=>{const m=mine(x);return '<div class="'+(x==t?"td":"")+'"><small>'+(x==t?"Sot":wd(x))+'</small><b>'+(+x.slice(8))+'.'+x.slice(5,7)+'</b>'+(m.length?m.map(e=>'<span class="sc '+sCls(e.value)+'">'+esc(sTxt(e.value))+(e.is_extra?" (extra)":"")+'</span>').join(""):'<span class="sc se">—</span>')+'</div>'}).join("")+'</div></div>';
   if(showSec)h=h.replace('<div class="days7">','<div class="days7">')+'<div class="mnav" style="justify-content:center"><button class="btn sm" aria-label="Muaji paraprak" onclick="shiftMonth(-1)">‹</button><b>'+mLabel(smonth)+'</b><button class="btn sm" aria-label="Muaji tjetër" onclick="shiftMonth(1)">›</button></div>'+schedGrid(false);
   return h;
 }
