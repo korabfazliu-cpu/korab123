@@ -67,6 +67,28 @@ main.wrap{position:relative;margin-top:-64px;padding-bottom:20px;display:flex;fl
 .tog h2{margin:0}.tog .chev{width:30px;height:30px;border-radius:50%;background:var(--bg,#eef1f7);display:grid;place-items:center;transition:transform .2s;flex:none}
 .tog .chev svg{width:16px;height:16px}.tog[aria-expanded=true] .chev{transform:rotate(180deg)}.tog[aria-expanded=true]{margin-bottom:12px}
 .pay td,.pay th{white-space:nowrap}.pay tr.tot td{border-top:2px solid var(--bd);background:var(--soft)}
+.ovk{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin-bottom:16px}
+.ovk .mini b{font-size:24px;white-space:nowrap}.ovk .mini.hot{width:100%;background:var(--blue)!important;text-align:left;display:block;font:inherit;color:#fff}.ovk .mini.hot b{color:#fff}.ovk .mini.hot small{color:#DCE4FF}.ovk3{grid-template-columns:repeat(auto-fit,minmax(140px,1fr));margin:6px 0 4px}
+.ovt{border-collapse:separate;border-spacing:2px;font-size:12px;width:auto}
+.ovt th,.ovt td{padding:0;border:0;white-space:nowrap;text-align:center;background:none;width:40px;min-width:40px;max-width:40px}
+.ovt th{font-size:11px;font-weight:700;color:var(--mut);text-transform:none;letter-spacing:0;padding:4px 0;border-radius:8px}
+.ovt th small{display:block;font-weight:600;opacity:.8}
+.ovt th.we{color:#9AA3B2}.ovt th.today{background:var(--blue);color:#fff}.ovt th.hol,.ovhl{background:#FFE4E4!important;color:#B42318!important}
+.ovt td.hol{background:#FFF4F4;border-radius:6px}
+.ovt .nm{position:sticky;left:0;z-index:2;background:#fff;text-align:left;width:150px;min-width:150px;max-width:150px;padding:4px 8px 4px 0;overflow:hidden;text-overflow:ellipsis}
+.ovt .sm2{width:46px;min-width:46px;max-width:46px;font-weight:700;color:var(--tx);background:var(--soft);border-radius:8px;padding:6px 2px}
+.ovt th.sm2{background:none;color:var(--mut)}.ovt .pay{width:64px;min-width:64px;max-width:64px}
+.ovt tr.grp td{background:none}.ovt tr.grp .nm{font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.04em;color:var(--blue);padding-top:12px}
+.ovt tr.on .nm .lnk{color:var(--blue)}.ovt tr.on td.sm2{background:#E8EEFF}
+.oc{display:block;height:24px;line-height:24px;border-radius:6px;font-size:10px;font-weight:700;overflow:hidden}
+.oc.se{background:transparent}.oc.ex{height:16px;line-height:16px;font-size:9px;margin-top:2px}
+.lnk{background:none;border:0;padding:0;font:inherit;font-size:13px;font-weight:700;color:var(--tx);cursor:pointer;text-align:left;max-width:130px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;vertical-align:middle}
+.lnk:hover{color:var(--blue);text-decoration:underline}
+.dot{display:inline-block;width:7px;height:7px;border-radius:50%;background:#F5A524;margin-left:5px;vertical-align:middle}
+.ovh{font-size:14px;font-weight:700;margin:18px 0 6px}
+.ovrow{display:flex;gap:12px;align-items:center;justify-content:space-between;flex-wrap:wrap;padding:9px 0;border-bottom:1px solid var(--bd);font-size:13px}
+.ovrow>span:first-of-type{flex:1}.ovrow.tot{border-bottom:0;font-size:15px}
+tr.arm td{background:#FFF8F7}
 .hd{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:12px}
 .hd h2{margin:0}
 .big{display:flex;gap:18px;align-items:center;border-radius:24px;padding:20px;box-shadow:0 14px 32px rgba(0,36,106,.14)}
@@ -212,7 +234,7 @@ const logoBlock=h=>'<span class="logo"><img src="'+LOGO+'" alt="038 Parking Cent
 const FOOT='<p class="foot">© 038 Parking Center · Prishtinë</p>';
 const CIRC=n=>Array.from({length:n},(_,i)=>'<span class="circ c'+(i+1)+'" aria-hidden="true"></span>').join("");
 const authPage=(card,below)=>'<div class="ap">'+CIRC(3)+'<div class="apin">'+logoBlock(56)+'<h1 style="margin-top:34px">Digital HR</h1><div class="card">'+card+'</div>'+(below||'')+'<p class="foot">© 038 Parking Center · Prishtinë</p></div></div>';
-let openS={hist:false,bal:false,hol:false},ltype="",menu=false,sub=null,session=null,me=null,mode="in",tab="me",myAbs=[],profs=[],allAbs=[],armed=null,msg="",q="",flash="",recovering=false,editing=null,opening=[],limp=null,sched={people:[],entries:[]},smonth=today().slice(0,7),sedit=null,imp=null,showSec=false;
+let openS={hist:false,bal:false,hol:false,acc:false},ltype="",menu=false,sub=null,session=null,me=null,mode="in",tab="me",myAbs=[],profs=[],allAbs=[],armed=null,msg="",q="",flash="",recovering=false,editing=null,opening=[],limp=null,sched={people:[],entries:[]},smonth=today().slice(0,7),sedit=null,imp=null,showSec=false;
 
 sb.auth.onAuthStateChange((ev,s)=>{
   if(ev=="TOKEN_REFRESHED")return;
@@ -230,8 +252,8 @@ async function load(){
     myAbs=a.data||[];
     if(me.role=="admin"){
       const [p,b]=await Promise.all([sb.from("profiles").select("*").order("full_name"),sb.from("absences").select("*").order("from_date",{ascending:false})]);
-      profs=p.data||[];allAbs=b.data||[];
-      if(tab=="me"&&!window.__adminSeen){tab=profs.some(x=>x.status=="pending")?"req":"staff";window.__adminSeen=1}
+      profs=p.data||[];allAbs=b.data||[];loadEmails();
+      if(tab=="me"&&!window.__adminSeen){tab=profs.some(x=>x.status=="pending")?"req":"ov";window.__adminSeen=1}
     }
     await loadSched();
   }
@@ -242,7 +264,7 @@ function shell(inner){
   const adm=me.role=="admin",pend=profs.filter(x=>x.status=="pending").length+allAbs.filter(a=>st(a)=="pending").length;
   let h='<header class="nhead">'+CIRC(2)+'<div class="wrap"><div class="hrow">'+logoBlock(36)+'<button class="icon-btn" onclick="out()" aria-label="Dil" title="Dil">'+I.out+'</button></div>';
   h+='<div class="who"><p>Mirë se vini,</p><h1>'+esc(me.full_name)+'</h1><p>'+esc(me.position)+' · Kuleta digjitale personale</p></div>';
-  if(adm)h+='<nav class="tabs" aria-label="Seksionet"><button class="'+(tab=="req"?"on":"")+'" onclick="go(\'req\')">Kërkesat'+(pend?' <span class="cnt">'+pend+'</span>':'')+'</button><button class="'+(tab=="staff"?"on":"")+'" onclick="go(\'staff\')">Stafi</button><button class="'+(tab=="sched"?"on":"")+'" onclick="go(\'sched\')">Orari</button><button class="'+(tab=="pay"?"on":"")+'" onclick="go(\'pay\')">Pagat</button><button class="'+(tab=="me"?"on":"")+'" onclick="go(\'me\')">Pushimet e mia</button></nav>';
+  if(adm)h+='<nav class="tabs" aria-label="Seksionet"><button class="'+(tab=="ov"?"on":"")+'" onclick="go(\'ov\')">Pasqyra</button><button class="'+(tab=="req"?"on":"")+'" onclick="go(\'req\')">Kërkesat'+(pend?' <span class="cnt">'+pend+'</span>':'')+'</button><button class="'+(tab=="staff"?"on":"")+'" onclick="go(\'staff\')">Stafi</button><button class="'+(tab=="sched"?"on":"")+'" onclick="go(\'sched\')">Orari</button><button class="'+(tab=="pay"?"on":"")+'" onclick="go(\'pay\')">Pagat</button><button class="'+(tab=="me"?"on":"")+'" onclick="go(\'me\')">Pushimet e mia</button></nav>';
   return h+'</div></header><main class="wrap">'+inner+'</main>'+FOOT;
 }
 
@@ -256,10 +278,10 @@ function draw(){
     return app.innerHTML=authPage('<h2>'+(me.status=="pending"?"Llogaria pret miratimin":"Llogaria u refuzua")+'</h2><p class="mut">'+(me.status=="pending"?"Administratori duhet ta miratojë llogarinë tuaj para se të hyni. Kthehuni më vonë.":"Administratori nuk e miratoi këtë llogari. Kontaktoni menaxherin.")+'</p><div style="display:flex;gap:8px;margin-top:18px"><button class="btn p" onclick="load()">Rifresko</button><button class="btn" onclick="out()">Dil</button></div>');
   }
   const adm=me.role=="admin";
-  app.innerHTML=shell(adm&&tab=="req"?reqView():adm&&tab=="staff"?staffView():adm&&tab=="sched"?schedView(true):adm&&tab=="pay"?payView():meView());
+  app.innerHTML=shell(adm&&tab=="req"?reqView():adm&&tab=="staff"?staffView():adm&&tab=="sched"?schedView(true):adm&&tab=="pay"?payView():adm&&tab=="ov"?ovView():meView());
   if($("#from")){$("#from").value=keep.f||"";$("#to").value=keep.t||"";$("#note").value=keep.n||"";$("#shift").value=keep.s||"";if(keep.d){$("#days").value=keep.d;calc(1)}else calc()}
 }
-const go=t=>{tab=t;menu=false;sedit=null;if(t=="pay")loadPay();else draw()};
+const go=t=>{tab=t;menu=false;sedit=null;if(t=="pay")loadPay();else if(t=="ov")loadOv();else draw()};
 
 function authView(){
   const su=mode=="up",fg=mode=="forgot",ent=' onkeydown="if(event.key==\'Enter\')$(\'#sub\').click()"';
@@ -511,7 +533,7 @@ function staffView(){
   const pm=u=>'<div class="pm"><i><em style="width:'+Math.min(100,u/20*100)+'%"></em></i>'+u+'/20</div>';
   const rows=list.map(s=>{const e=by(s.id);const oth=Object.keys(T).filter(k=>k!="vjetor"&&k!="mjekesor"&&k!="extra").reduce((n,k)=>n+used(e,k,s.id),0);return '<tr><td><div style="display:flex;align-items:center;gap:10px"><span class="av">'+esc(ini(s.full_name))+'</span><b>'+esc(s.full_name)+'</b></div></td><td class="mut">'+esc(s.position)+'</td><td>'+pm(used(e,"vjetor",s.id))+'</td><td>'+pm(used(e,"mjekesor",s.id))+'</td><td>'+oth+'</td><td>'+used(e,"extra",s.id)+'</td></tr>'}).join("");
   h+='<div class="card"><div class="hd"><h2>Përmbledhje</h2><div style="display:flex;gap:8px;flex-wrap:wrap"><label class="sr" for="q">Kërko punonjës</label><input id="q" type="search" placeholder="Kërko punonjës" value="'+esc(q)+'" oninput="search(this.value)" style="height:44px;width:220px"><button class="btn ol" onclick="csv()">'+I.dl+'Eksporto CSV</button></div></div><div class="scroll"><table><tr><th>Emri</th><th>Pozita</th><th>Vjetor</th><th>Mjekësor</th><th>Të tjera</th><th>Punë extra</th></tr>'+(rows||'<tr><td colspan="6" class="mut">Asnjë rezultat.</td></tr>')+'</table></div></div>';
-  h+=leaveCard()+linkCard();
+  h+=accCard()+leaveCard()+linkCard();
   h+=list.map(s=>'<div class="card"><div class="hd"><div style="display:flex;align-items:center;gap:10px"><span class="av">'+esc(ini(s.full_name))+'</span><div><h2 style="margin:0">'+esc(s.full_name)+'</h2><div class="mut" style="font-size:13px">'+esc(s.position)+'</div></div></div></div>'+(by(s.id).length?by(s.id).map(e=>entry(e,true)).join(""):'<span class="mut">Pa pushime.</span>')+'</div>').join("");
   return h;
 }
@@ -658,6 +680,105 @@ function payCsv(){
   pay.forEach(r=>{c+=[qq(r.name),qq(r.position),r.monthly==null?qq("Part time"):n(r.monthly),n(r.daily_rate),r.work_days,r.extra_days,r.holiday_days,qq(r.holiday_list),n(r.extra_pay),n(r.holiday_pay),n(r.total)].join(";")+"\n"});
   c+=[qq("Gjithsej"),"",n(pay.reduce((s,r)=>s+(+r.base_pay||0),0)),"","","","","",n(pay.reduce((s,r)=>s+(+r.extra_pay||0),0)),n(pay.reduce((s,r)=>s+(+r.holiday_pay||0),0)),n(pay.reduce((s,r)=>s+(+r.total||0),0))].join(";")+"\n";
   const a=document.createElement("a");a.href=URL.createObjectURL(new Blob(["\ufeff"+c],{type:"text/csv"}));a.download="pagat-"+pmon+".csv";a.click();
+}
+let ovm=today().slice(0,7),ov=null,ovErr="",ovBusy=false,ovSel=null;
+async function loadOv(){
+  ovBusy=true;ov=null;ovErr="";if(tab=="ov")draw();
+  const [y,m]=ovm.split("-").map(Number),days=mDays(ovm);
+  try{
+    const [e,p,h]=await Promise.all([sb.from("schedule_entries").select("*").gte("day",days[0]).lte("day",days[days.length-1]),sb.rpc("payroll_month",{p_year:y,p_month:m}),sb.from("holidays").select("*").order("day")]);
+    if(e.error)throw e.error;
+    ov={entries:e.data||[],pay:(p&&p.data)||[],hols:(h&&h.data)||[]};
+  }catch(err){ovErr="Pasqyra nuk u ngarkua: "+(err.message||err)}
+  ovBusy=false;if(tab=="ov")draw();
+}
+function ovShift(n){const [y,m]=ovm.split("-").map(Number),d=new Date(y,m-1+n,1);ovm=d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0");loadOv()}
+const isShift=v=>/^\s*\d{1,2}(:\d{2})?\s*[-–]\s*\d{1,2}/.test(String(v||""));
+const ovCode=v=>{const t=String(v||"").trim(),c=sCls(t);if(c=="sl")return /mjek/i.test(t)?"MJ":"V";if(c=="so")return "P";const m=t.match(/^(\d{1,2})(?::\d{2})?\s*[-–]\s*(\d{1,2})/);return m?m[1].padStart(2,"0")+"-"+m[2].padStart(2,"0"):t.slice(0,4)};
+const absOn=(uid,d)=>uid?allAbs.filter(a=>a.user_id==uid&&st(a)=="approved"&&a.leave_type!="extra"&&a.from_date<=d&&a.to_date>=d):[];
+const absCode=k=>({vjetor:"V",mjekesor:"MJ",papagese:"PP"})[k]||"L";
+// One person's month: per-day cells and totals.
+function ovPerson(p){
+  const days=mDays(ovm),es=ov.entries.filter(e=>e.person_id==p.id),hol=new Set(ov.hols.map(x=>x.day));
+  let shifts=0,extra=0,leave=0,holW=0;const cells=[],extras=[],leaves=[],holList=[];
+  days.forEach(d=>{
+    const de=es.filter(e=>e.day==d),reg=de.filter(e=>!e.is_extra),ex=de.filter(e=>e.is_extra&&isShift(e.value)),ab=absOn(p.user_id,d);
+    const work=de.some(e=>isShift(e.value)),lv=reg.find(e=>!isShift(e.value)&&sCls(e.value)=="sl")||null;
+    if(work)shifts++;if(ex.length){extra++;ex.forEach(e=>extras.push(e))}
+    if(work&&hol.has(d)){holW++;holList.push(d)}
+    if(lv||ab.length){leave++;leaves.push({d,t:lv?sTxt(lv.value):T[ab[0].leave_type][0]})}
+    cells.push({d,reg,ex,ab,lv});
+  });
+  const pay=ov.pay.find(x=>x.person_id==p.id)||null;
+  return {cells,shifts,extra,leave,holW,extras,leaves,holList,pay};
+}
+function ovView(){
+  if(!ov&&!ovErr&&!ovBusy){loadOv();return '<div class="card"><p class="mut">Duke ngarkuar pasqyrën…</p></div>'}
+  let h='<div class="card"><div class="hd"><div><h2 style="margin:0">Pasqyra e muajit</h2><p class="mut" style="font-size:13px;margin-top:4px">Oraret, ditët extra, pushimet, festat dhe pagat e të gjithë stafit në një vend.</p></div><div class="mnav"><button class="btn sm" aria-label="Muaji paraprak" onclick="ovShift(-1)">‹</button><b>'+mLabel(ovm)+'</b><button class="btn sm" aria-label="Muaji tjetër" onclick="ovShift(1)">›</button></div></div></div>';
+  if(ovErr)return h+'<div class="card"><p class="err">'+esc(ovErr)+'</p><button class="btn" onclick="loadOv()">Provo sërish</button></div>';
+  if(!ov)return h+'<div class="card"><p class="mut">Duke ngarkuar…</p></div>';
+  const P=sched.people.slice().sort((a,b)=>(a.position||"~").localeCompare(b.position||"~")||a.name.localeCompare(b.name)),D=P.map(p=>({p,x:ovPerson(p)}));
+  const t=today(),tE=sched.entries.filter(e=>e.day==t),days=mDays(ovm),mh=ov.hols.filter(x=>x.day.slice(0,7)==ovm);
+  const workT=P.filter(p=>tE.some(e=>e.person_id==p.id&&isShift(e.value))).length,offT=P.filter(p=>tE.some(e=>e.person_id==p.id&&sCls(e.value)=="sl")||absOn(p.user_id,t).length).length;
+  const pend=profs.filter(x=>x.status=="pending").length+allAbs.filter(a=>st(a)=="pending").length,payT=ov.pay.reduce((s,r)=>s+(+r.total||0),0),exT=D.reduce((s,r)=>s+r.x.extra,0),linked=P.filter(p=>p.user_id).length;
+  const tile=(lbl,val,sub,click)=>'<'+(click?'button class="mini hot" onclick="'+click+'"':'div class="mini"')+'><small>'+lbl+'</small><b>'+val+'</b>'+(sub?'<div class="mut" style="font-size:12px;margin-top:2px'+(click?';color:#DCE4FF':'')+'">'+sub+'</div>':'')+'</'+(click?'button':'div')+'>';
+  h+='<div class="ovk">'+tile("Stafi",P.length,linked+" të lidhur me llogari")+tile("Në punë sot",workT,offT+" në pushim sot")+tile("Kërkesa në pritje",pend,pend?"Hapni Kërkesat":"Asgjë për miratim",pend?"go('req')":"")+tile("Ditë extra",exT,mLabel(ovm))+tile("Festa zyrtare",mh.length,mh.length?esc(mh.map(x=>x.day.slice(8)+"."+x.day.slice(5,7)).join(", ")):"Asnjë këtë muaj")+tile("Pagat e muajit",eur(payT),"Hapni Pagat","go('pay')")+'</div>';
+  if(!P.length)return h+'<div class="card"><p class="mut">Nuk ka staf në listë. Ngarkoni orarin te Orari.</p></div>';
+  const hol=Object.fromEntries(ov.hols.map(x=>[x.day,x.name]));
+  h+='<div class="card"><div class="hd"><h2 style="margin:0">Orari dhe përmbledhja për secilin</h2><span class="mut" style="font-size:12px">Klikoni emrin për detajet</span></div><div class="sg"><table class="ovt"><tr><th class="nm">Punonjësi</th><th class="sm2">Turne</th><th class="sm2">Extra</th><th class="sm2">Pushim</th><th class="sm2">Festa</th><th class="sm2 pay">Paga</th>'+days.map(d=>'<th class="'+(d==t?"today ":"")+(hol[d]?"hol ":"")+([0,6].includes(new Date(d+"T12:00:00").getDay())?"we":"")+'"'+(hol[d]?' title="'+esc(hol[d])+'"':'')+'>'+(+d.slice(8))+'<small>'+wd(d).slice(0,2)+'</small></th>').join("")+'</tr>';
+  let grp=null;
+  D.forEach(({p,x})=>{
+    if((p.position||"")!==grp){grp=p.position||"";h+='<tr class="grp"><td class="nm" colspan="6">'+esc(grp||"Pa pozitë")+'</td><td colspan="'+days.length+'"></td></tr>'}
+    const pay=x.pay;
+    h+='<tr class="'+(ovSel==p.id?"on":"")+'"><td class="nm"><button class="lnk" onclick="ovSel=ovSel==\''+p.id+'\'?null:\''+p.id+'\';draw();setTimeout(()=>{const c=document.getElementById(\'ovd\');if(c)c.scrollIntoView({block:\'start\',behavior:\'smooth\'})},30)">'+esc(p.name)+'</button>'+(p.user_id?'':'<span class="dot" title="Pa llogari të lidhur"></span>')+'</td><td class="sm2">'+x.shifts+'</td><td class="sm2">'+(x.extra||"·")+'</td><td class="sm2">'+(x.leave||"·")+'</td><td class="sm2">'+(x.holW||"·")+'</td><td class="sm2 pay">'+(pay?(pay.missing_base?'<span class="badge w">—</span>':eur(pay.total).replace(" €","")):"—")+'</td>';
+    h+=x.cells.map(c=>{
+      const r=c.reg[0],cls=c.lv?"sl":r?sCls(r.value):c.ab.length?"sl":"se",txt=c.lv?ovCode(c.lv.value):r?ovCode(r.value):c.ab.length?absCode(c.ab[0].leave_type):"",tip=[...c.reg.map(e=>e.value),...c.ex.map(e=>"Extra "+e.value),...c.ab.map(a=>T[a.leave_type][0]),hol[c.d]?"Festë: "+hol[c.d]:""].filter(Boolean).join(" · ");
+      return '<td class="'+(hol[c.d]?"hol":"")+'"'+(tip?' title="'+esc(p.name+" · "+c.d.split("-").reverse().join(".")+": "+tip)+'"':'')+'><span class="oc '+cls+'">'+esc(txt)+'</span>'+(c.ex.length?'<span class="oc sx ex">+'+esc(ovCode(c.ex[0].value))+'</span>':'')+'</td>'}).join("");
+    h+='</tr>';
+  });
+  h+='</table></div><div class="legend"><span class="sm">Paradite</span><span class="sa">Pasdite</span><span class="sn">Natë</span><span class="sx">+ Extra</span><span class="sl">V Vjetor · MJ Mjekësor · L Leje</span><span class="so">P Pushim</span><span class="ovhl">Festë zyrtare</span><span style="background:none;color:var(--mut)"><i class="dot"></i> pa llogari të lidhur</span></div></div>';
+  const s=ovSel&&D.find(r=>r.p.id==ovSel);
+  if(s)h+=ovDetail(s.p,s.x);
+  if(mh.length)h+='<div class="card"><h2>Festat zyrtare · '+mLabel(ovm)+'</h2>'+mh.map(f=>{const w=D.filter(r=>r.x.holList.includes(f.day)).map(r=>r.p.name);return '<div class="ovrow"><b>'+f.day.split("-").reverse().join(".")+'</b><span>'+esc(f.name)+'</span><span class="mut">'+(w.length?'Në punë: '+esc(w.join(", "))+' (+1 mëditje secili)':'Askush në orar')+'</span></div>'}).join("")+'</div>';
+  return h;
+}
+function ovDetail(p,x){
+  const acc=profs.find(z=>z.id==p.user_id),uid=p.user_id,pay=x.pay,yr=+ovm.slice(0,4);
+  const vj=used(uid?allAbs.filter(a=>a.user_id==uid):[],"vjetor",uid)+(uid?0:opening.filter(o=>o.person_id==p.id&&o.leave_type=="vjetor").reduce((s,o)=>s+o.used_days,0));
+  const mj=used(uid?allAbs.filter(a=>a.user_id==uid):[],"mjekesor",uid)+(uid?0:opening.filter(o=>o.person_id==p.id&&o.leave_type=="mjekesor").reduce((s,o)=>s+o.used_days,0));
+  const reqs=uid?allAbs.filter(a=>a.user_id==uid&&+a.from_date.slice(0,4)==yr):[];
+  let h='<div class="card" id="ovd"><div class="hd"><div><h2 style="margin:0">'+esc(p.name)+'</h2><p class="mut" style="font-size:13px;margin-top:2px">'+esc(p.position||"Pa pozitë")+' · '+(acc?'Llogaria: '+esc(acc.full_name):'<span class="badge w">Pa llogari të lidhur</span>')+'</p></div><button class="btn sm" onclick="ovSel=null;draw()">Mbyll</button></div>';
+  h+='<div class="ovk ovk3">'+[["Turne",x.shifts,"ditë pune"],["Ditë extra",x.extra,pay&&x.extra?"+"+eur(pay.extra_pay):""],["Festa në punë",x.holW,pay&&x.holW?"+"+eur(pay.holiday_pay):""],["Pushimi vjetor "+Y,vj+"<span>/20</span>",Math.max(0,20-vj)+" ditë të mbetura"],["Mjekësor "+Y,mj+"<span>/20</span>",""],["Paga e muajit",pay?(pay.missing_base?"—":eur(pay.total)):"—",pay&&!pay.missing_base?(pay.monthly!=null?"Bazë "+eur(pay.monthly):"Part time · "+eur(pay.daily_rate)+"/ditë"):"Mungon paga bazë"]].map(a=>'<div class="mini"><small>'+a[0]+'</small><b>'+a[1]+'</b>'+(a[2]?'<div class="mut" style="font-size:12px;margin-top:2px">'+a[2]+'</div>':'')+'</div>').join("")+'</div>';
+  if(pay&&!pay.missing_base)h+='<h3 class="ovh">Llogaritja e pagës</h3><div class="ovrow"><span>Paga bazë'+(pay.monthly==null?' ('+x.shifts+' ditë × '+eur(pay.daily_rate)+')':'')+'</span><b>'+eur(pay.base_pay)+'</b></div><div class="ovrow"><span>Ditë extra: '+pay.extra_days+' × '+eur(pay.daily_rate)+'</span><b>'+eur(pay.extra_pay)+'</b></div><div class="ovrow"><span>Festa zyrtare: '+pay.holiday_days+' × '+eur(pay.daily_rate)+(pay.holiday_list?' <span class="mut">('+esc(pay.holiday_list)+')</span>':'')+'</span><b>'+eur(pay.holiday_pay)+'</b></div><div class="ovrow tot"><span>Totali</span><b>'+eur(pay.total)+'</b></div>';
+  h+='<h3 class="ovh">Ditët extra · '+mLabel(ovm)+'</h3>'+(x.extras.length?x.extras.map(e=>'<div class="ovrow"><b>'+e.day.split("-").reverse().join(".")+'</b><span><span class="oc sx" style="display:inline-block;padding:0 10px">'+esc(e.value)+'</span></span><span class="mut">'+(e.absence_id?'Nga kërkesa e miratuar':'Nga orari')+'</span></div>').join(""):'<p class="mut">Nuk ka ditë extra.</p>');
+  h+='<h3 class="ovh">Pushimet · '+mLabel(ovm)+'</h3>'+(x.leaves.length?x.leaves.map(l=>'<div class="ovrow"><b>'+l.d.split("-").reverse().join(".")+'</b><span>'+esc(l.t)+'</span></div>').join(""):'<p class="mut">Nuk ka pushime këtë muaj.</p>');
+  if(uid)h+='<h3 class="ovh">Kërkesat në aplikacion · '+yr+'</h3>'+(reqs.length?reqs.map(e=>entry(e,false)).join(""):'<p class="mut">Nuk ka kërkesa.</p>');
+  else h+='<p class="mut" style="font-size:12px;margin-top:12px">Lidheni me llogarinë te Stafi ose Orari që të shihen edhe kërkesat e tij në aplikacion.</p>';
+  return h+'</div>';
+}
+let emails={},delArm=null,delErr="",delMsg="";
+async function loadEmails(){try{const r=await sb.rpc("admin_user_emails");if(!r.error){emails=Object.fromEntries((r.data||[]).map(x=>[x.id,x]));if(tab=="staff")draw()}}catch(e){}}
+function accCard(){
+  const L=profs.slice().sort((a,b)=>({pending:0,approved:1,rejected:2}[a.status]-{pending:0,approved:1,rejected:2}[b.status])||a.full_name.localeCompare(b.full_name));
+  const stB=s=>s=="approved"?'<span class="badge o">Aktiv</span>':s=="pending"?'<span class="badge w">Në pritje</span>':'<span class="badge r">Refuzuar</span>';
+  let h='<div class="card">'+togH("acc","Llogaritë e përdoruesve",L.length);
+  if(!openS.acc)return h+'</div>';
+  if(delMsg)h+='<div class="info" style="margin:0 0 10px"><span>'+esc(delMsg)+'</span></div>';
+  h+='<p class="mut" style="font-size:13px;margin:0 0 10px">Fshirja e një llogarie largon hyrjen në aplikacion dhe kërkesat e përdoruesit në aplikacion. Orari, gjendja e pushimeve nga Excel-i dhe ditët extra në orar mbeten; emri te lista e stafit thjesht shkëputet nga llogaria.</p>';
+  h+='<div class="scroll"><table><tr><th>Emri</th><th>Email</th><th>Statusi</th><th>Hyrja e fundit</th><th></th></tr>'+L.map(p=>{
+    const em=emails[p.id],self=p.id==session.user.id,adm=p.role=="admin",n=allAbs.filter(a=>a.user_id==p.id).length,lk=sched.people.find(x=>x.user_id==p.id);
+    const act=self||adm?'<span class="mut" style="font-size:12px">'+(self?"Ju":"Admin")+'</span>':delArm==p.id?'':'<button class="btn sm" style="color:var(--bad)" onclick="delArm=\''+p.id+'\';delErr=\'\';delMsg=\'\';draw()">Fshi</button>';
+    let r='<tr'+(delArm==p.id?' class="arm"':'')+'><td><div style="display:flex;align-items:center;gap:10px"><span class="av">'+esc(ini(p.full_name))+'</span><div><b>'+esc(p.full_name)+'</b><div class="mut" style="font-size:12px">'+esc(p.position||"")+(adm?' · Admin':'')+'</div></div></div></td><td class="mut" style="font-size:13px">'+(em?esc(em.email):'—')+'</td><td>'+stB(p.status)+'</td><td class="mut" style="font-size:13px">'+(em&&em.last_sign_in_at?fmt(em.last_sign_in_at.slice(0,10)):'—')+'</td><td style="text-align:right">'+act+'</td></tr>';
+    if(delArm==p.id)r+='<tr class="arm"><td colspan="5"><div class="warn" style="margin:0">'+I.warn+'<span>Fshihet llogaria e <b>'+esc(p.full_name)+'</b>'+(n?' dhe kërkesat e përdoruesit në aplikacion ('+n+')':'')+(lk?'. Emri "'+esc(lk.name)+'" mbetet në listën e stafit, pa llogari':'')+'. Ky veprim nuk kthehet mbrapsht.</span></div>'+(delErr?'<p class="err">'+esc(delErr)+'</p>':'')+'<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px"><button class="btn p" id="delgo" style="background:var(--bad);border-color:var(--bad)" onclick="delUser(\''+p.id+'\')">Po, fshije llogarinë</button><button class="btn" onclick="delArm=null;delErr=\'\';draw()">Anulo</button></div></td></tr>';
+    return r}).join("")+'</table></div>';
+  return h+'</div>';
+}
+async function delUser(id){
+  const b=$("#delgo");if(b)b.disabled=true;
+  const p=profs.find(x=>x.id==id),{error}=await sb.rpc("admin_delete_user",{p_user:id});
+  if(error){delErr="Fshirja dështoi: "+error.message;draw();return}
+  delArm=null;delErr="";delMsg="Llogaria e "+(p?p.full_name:"përdoruesit")+" u fshi.";
+  await load();
 }
 function csv(){
   const qq=v=>'"'+String(v==null?"":v).replace(/"/g,'""')+'"';
