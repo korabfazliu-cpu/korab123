@@ -89,6 +89,8 @@ main.wrap{position:relative;margin-top:-64px;padding-bottom:20px;display:flex;fl
 .ovrow{display:flex;gap:12px;align-items:center;justify-content:space-between;flex-wrap:wrap;padding:9px 0;border-bottom:1px solid var(--bd);font-size:13px}
 .ovrow>span:first-of-type{flex:1}.ovrow.tot{border-bottom:0;font-size:15px}
 tr.arm td{background:#FFF8F7}
+select.pick{appearance:none;-webkit-appearance:none;cursor:pointer;padding-right:44px;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%2364748B' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E")!important;background-repeat:no-repeat!important;background-position:right 18px center!important;background-size:16px!important}
+select.pick:invalid{color:var(--mut)}select.pick option{color:var(--tx)}
 .sgt .nm,.ovt .nm{box-shadow:-18px 0 0 #fff}
 .hd{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:12px}
 .hd h2{margin:0}
@@ -215,6 +217,7 @@ const held=(es,k,uid)=>sumY(es,k,s=>s!="rejected")+opn(uid,k);
 const STB={pending:'<span class="badge w">Në pritje</span>',approved:'<span class="badge o">Miratuar</span>',rejected:'<span class="badge r">Refuzuar</span>'};
 const T={vjetor:["Pushimi vjetor",20],mjekesor:["Pushimi mjekësor",20],martese:["Pushimi në rast martese",5],vdekje:["Pushimi në rast vdekjeje të anëtarit të ngushtë të familjes",5],lindje:["Pushim për lindje të fëmijës",3],gjak:["Pushim për dhënie vullnetare të gjakut",2],papagese:["Pushim pa pagesë",0],bartur:["Pushim i bartur nga viti paraprak",0],kompenzim:["Pushim me kompenzim",0],extra:["Punë extra",0]};
 const SPECIAL=["martese","vdekje","lindje","gjak"],OTHER=["papagese","bartur","kompenzim"],HIDDEN=["bartur","kompenzim"];
+const POS=["Cashier","Mirëmbajtje","Park","Pastrim"];
 const MENU=[{k:"vjetor"},{k:"mjekesor"},{l:"Raste të veçanta",i:SPECIAL},{k:"papagese"},{k:"extra"}];
 const ini=n=>String(n||"?").trim().split(/\s+/).slice(0,2).map(w=>w[0]||"").join("").toUpperCase();
 const today=()=>{const d=new Date();return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0")};
@@ -301,7 +304,7 @@ function authView(){
   const sw=(m,t)=>'<button type="button" class="lnk" onclick="mode=\''+m+'\';msg=\'\';draw()">'+t+'</button>';
   if(fg)return authPage('<h2>Rivendosni fjalëkalimin</h2><p class="mut" style="font-size:14px">Shkruani email-in me të cilin jeni regjistruar. Do t’ju dërgojmë një link për të vendosur fjalëkalim të ri.</p><label for="em">Email</label><input id="em" type="email" autocomplete="email"'+ent+'><p class="err'+(msg?" ok":"")+'" id="err">'+esc(msg)+'</p><button class="btn p full" style="margin-top:6px" id="sub" onclick="forgot()">Dërgo linkun</button>','<p class="below">'+sw("in","Kthehu te hyrja")+'</p>');
   return authPage('<h2>'+(su?"Krijoni llogarinë tuaj":"Hyni me llogarinë tuaj")+'</h2>'+(su?'<p class="mut" style="font-size:14px">Hyrja aktivizohet pasi ta miratojë administratori.</p>':'')+
-  (su?'<label for="nm">Emri dhe mbiemri</label><input id="nm" autocomplete="name"><label for="ps">Pozita</label><input id="ps" placeholder="p.sh. Cashier, Pastrim, Mirëmbajtje">':'')+
+  (su?'<label for="nm">Emri dhe mbiemri</label><input id="nm" autocomplete="name"><label for="ps">Pozita</label><select id="ps" class="pick" required><option value="">Zgjidhni pozitën</option>'+POS.map(x=>'<option>'+x+'</option>').join("")+'</select>':'')+
   '<label for="em">Email</label><input id="em" type="email" autocomplete="email"><label for="pw">Fjalëkalimi'+(su?" (minimumi 8 karaktere)":"")+'</label><input id="pw" type="password" autocomplete="'+(su?"new-password":"current-password")+'"'+ent+'>'+(su?'':'<p style="text-align:right;margin-top:10px;font-size:13px">'+sw("forgot","Keni harruar fjalëkalimin?")+'</p>')+'<p class="err'+(msg&&!su?" ok":"")+'" id="err">'+esc(msg)+'</p>'+
   '<button class="btn p full" style="margin-top:6px" id="sub" onclick="'+(su?"signup()":"signin()")+'">'+(su?"Regjistrohu":"Hyr")+'</button>',
   '<p class="below">'+(su?"Keni llogari? ":"Nuk keni llogari? ")+sw(su?"in":"up",su?"Hyni":"Krijo llogari")+'</p><div class="info">'+I.info+'<span>Llogaritë e reja aktivizohen pasi t’i miratojë administratori.</span></div>');
@@ -335,6 +338,7 @@ async function signin(){
 async function signup(){
   const n=$("#nm").value.trim(),p=$("#ps").value.trim(),e=$("#em").value.trim(),w=$("#pw").value,er=$("#err");
   er.textContent="";
+  if(n&&!p){er.textContent="Zgjidhni pozitën.";$("#ps").focus();return}
   if(!n||!p||!e||w.length<8){er.textContent="Plotësoni të gjitha fushat (fjalëkalimi minimumi 8 karaktere).";return}
   $("#sub").disabled=true;
   const {data,error}=await sb.auth.signUp({email:e,password:w,options:{data:{full_name:n,position:p}}});
