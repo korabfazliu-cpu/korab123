@@ -89,6 +89,7 @@ main.wrap{position:relative;margin-top:-64px;padding-bottom:20px;display:flex;fl
 .ovrow{display:flex;gap:12px;align-items:center;justify-content:space-between;flex-wrap:wrap;padding:9px 0;border-bottom:1px solid var(--bd);font-size:13px}
 .ovrow>span:first-of-type{flex:1}.ovrow.tot{border-bottom:0;font-size:15px}
 tr.arm td{background:#FFF8F7}
+.sickbox{margin-top:12px;padding:14px 16px;border-radius:16px;background:#FFF6E5;border:1px solid #FFD58A;font-size:14px;line-height:1.5}.sickbox p{margin:0 0 10px}.chk{display:flex;gap:10px;align-items:center;font-weight:600;cursor:pointer}.chk input{width:20px;height:20px;margin:0;flex:none}
 .ledg{display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:14px;min-width:0}tr.arm td,.ledg *{white-space:normal}.lef label{min-height:34px}.lef label{font-size:13px;font-weight:600;display:block;margin-bottom:4px}.lef input[type=number]{height:42px}
 select.pick{appearance:none;-webkit-appearance:none;cursor:pointer;padding-right:44px;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%2364748B' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E")!important;background-repeat:no-repeat!important;background-position:right 18px center!important;background-size:16px!important}
 select.pick:invalid{color:var(--mut)}select.pick option{color:var(--tx)}
@@ -216,8 +217,8 @@ const opn=(uid,k)=>{if(!uid)return 0;const p=sched.people.find(x=>x.user_id==uid
 const used=(es,k,uid)=>sumY(es,k,s=>s=="approved")+opn(uid,k);
 const held=(es,k,uid)=>sumY(es,k,s=>s!="rejected")+opn(uid,k);
 const STB={pending:'<span class="badge w">Në pritje</span>',approved:'<span class="badge o">Miratuar</span>',rejected:'<span class="badge r">Refuzuar</span>'};
-const T={vjetor:["Pushimi vjetor",20],mjekesor:["Pushimi mjekësor",20],martese:["Pushimi në rast martese",5],vdekje:["Pushimi në rast vdekjeje të anëtarit të ngushtë të familjes",5],lindje:["Pushim për lindje të fëmijës",3],gjak:["Pushim për dhënie vullnetare të gjakut",2],papagese:["Pushim pa pagesë",0],bartur:["Pushim i bartur nga viti paraprak",0],kompenzim:["Pushim me kompenzim",0],extra:["Punë extra",0]};
-const SPECIAL=["martese","vdekje","lindje","gjak"],OTHER=["papagese","bartur","kompenzim"],HIDDEN=["bartur","kompenzim"];
+const T={vjetor:["Pushimi vjetor",20],mjekesor:["Pushimi mjekësor",20],martese:["Pushimi në rast martese",5],vdekje:["Pushimi në rast vdekjeje të anëtarit të ngushtë të familjes",5],lindje:["Pushim për lindje të fëmijës",3],gjak:["Pushim për dhënie vullnetare të gjakut",2],papagese:["Pushim pa pagesë",0],mjekesor_pp:["Pushim mjekësor pa pagesë",0],bartur:["Pushim i bartur nga viti paraprak",0],kompenzim:["Pushim me kompenzim",0],extra:["Punë extra",0]};
+const SPECIAL=["martese","vdekje","lindje","gjak"],OTHER=["papagese","mjekesor_pp","bartur","kompenzim"],HIDDEN=["bartur","kompenzim","mjekesor_pp"];
 const POS=["Cashier","Mirëmbajtje","Park","Pastrim"];
 const MENU=[{k:"vjetor"},{k:"mjekesor"},{l:"Raste të veçanta",i:SPECIAL},{k:"papagese"},{k:"extra"}];
 const ini=n=>String(n||"?").trim().split(/\s+/).slice(0,2).map(w=>w[0]||"").join("").toUpperCase();
@@ -368,7 +369,7 @@ function meView(){
   if(flash)h+='<div class="info" style="margin-top:0">'+I.info+'<span>'+esc(flash)+'</span></div>';
   h+='<div class="minis m3"><div class="mini"><small>Mjekësor</small><b>'+(20-hm)+'<span> / 20</span></b></div><div class="mini"><small>Të tjera</small><b>'+sp+'<span> ditë</span></b></div><div class="mini"><small>Punë extra</small><b>'+ex+'<span> ditë'+(hx>ex?' (+'+(hx-ex)+')':'')+'</span></b></div></div>';
   h+=mySchedCard();
-  h+='<div class="card"><h2>Raporto pushim ose punë extra</h2>'+menuHtml()+'<div class="row" style="margin-top:12px"><div><label for="from">Prej</label><input type="date" id="from" oninput="calc()"></div><div><label for="to">Deri</label><input type="date" id="to" oninput="calc()"></div><div><label for="days">Ditë</label><input type="number" id="days" min="1" max="20" oninput="calc(1)"></div></div><div id="shbox" style="display:none"><label for="shift">Orari i punës extra</label><input id="shift" list="shl2" placeholder="p.sh. 08-16"><datalist id="shl2">'+["07-15","08-16","09-17","10-18","15-23","16-00","23-07"].map(o=>'<option value="'+o+'">').join("")+'</datalist></div><label for="note">Shënim (opsionale)</label><textarea id="note" rows="2"></textarea><div id="docbox" style="display:none"><div class="warn">'+I.warn+'<span><b>Mbi 3 ditë:</b> ngarkoni dëshminë e mjekut (PDF ose foto).</span></div><label for="file">Dëshmia e mjekut</label><input type="file" id="file" accept="application/pdf,image/*"></div><p class="mut" id="left" style="font-size:13px;margin-top:12px"></p><p class="err" id="err"></p><button class="btn p full" style="margin-top:4px" id="go" onclick="send()">Dërgo</button></div>';
+  h+='<div class="card"><h2>Raporto pushim ose punë extra</h2>'+menuHtml()+'<div class="row" style="margin-top:12px"><div><label for="from">Prej</label><input type="date" id="from" oninput="calc()"></div><div><label for="to">Deri</label><input type="date" id="to" oninput="calc()"></div><div><label for="days">Ditë</label><input type="number" id="days" min="1" max="20" oninput="calc(1)"></div></div><div id="shbox" style="display:none"><label for="shift">Orari i punës extra</label><input id="shift" list="shl2" placeholder="p.sh. 08-16"><datalist id="shl2">'+["07-15","08-16","09-17","10-18","15-23","16-00","23-07"].map(o=>'<option value="'+o+'">').join("")+'</datalist></div><label for="note">Shënim (opsionale)</label><textarea id="note" rows="2"></textarea><div id="docbox" style="display:none"><div class="warn">'+I.warn+'<span><b>Mbi 3 ditë:</b> ngarkoni dëshminë e mjekut (PDF ose foto).</span></div><label for="file">Dëshmia e mjekut</label><input type="file" id="file" accept="application/pdf,image/*"></div><p class="mut" id="left" style="font-size:13px;margin-top:12px"></p><div id="sickbox" class="sickbox" style="display:none"></div><p class="err" id="err"></p><button class="btn p full" style="margin-top:4px" id="go" onclick="send()">Dërgo</button></div>';
   h+='<div class="card">'+togH("hist","Historiku",myAbs.length)+(openS.hist?(myAbs.length?myAbs.map(e=>entry(e,false)).join(""):'<p class="mut">Nuk ka pushime të regjistruara.</p>'):'')+'</div>';
   h+='<div class="card">'+togH("bal","Gjendja e pushimeve "+Y)+(!openS.bal?'':'<div class="scroll"><table><tr><th>Lloji i pushimit</th><th>Të lejuara</th><th>Të shfrytëzuara</th><th>Në dispozicion</th></tr>'+Object.keys(T).filter(k=>!HIDDEN.includes(k)||held(myAbs,k,session.user.id)>0).map(k=>{const a=T[k][1],u=used(myAbs,k,session.user.id),hh=held(myAbs,k,session.user.id);return '<tr><td class="wrapc">'+esc(T[k][0])+'</td><td>'+(a||"—")+'</td><td>'+u+(hh>u?' <span class="mut">(+'+(hh-u)+' në pritje)</span>':'')+'</td><td><b>'+(a?a-hh:"—")+'</b></td></tr>'}).join("")+'</table></div>')+'</div>';
   return h;
@@ -587,9 +588,17 @@ function calc(manual){
   const d=+$("#days").value;
   $("#docbox").style.display=(ltype=="mjekesor"&&d>3)?"block":"none";
   $("#shbox").style.display=ltype=="extra"?"block":"none";
-  const a=ltype&&T[ltype][1],no=a?noLeft(ltype):"";
-  $("#left").innerHTML=ltype=="extra"?'Puna extra shtohet në orarin tuaj pasi ta miratojë administratori.':no?'<span class="err" style="display:block;margin:0">'+no+'</span>':a?'Ju mbeten <b style="color:var(--tx)">'+(a-held(myAbs,ltype,session.user.id))+' ditë</b> për këtë lloj pushimi në '+Y+'.':'';
+  const a=ltype&&T[ltype][1],sick=ltype=="mjekesor"&&!!noLeft("mjekesor"),no=a&&!sick?noLeft(ltype):"";
+  const sb2=$("#sickbox");sb2.style.display=sick?"block":"none";
+  if(sick){const was=$("#sickok")&&$("#sickok").checked;sb2.innerHTML='<p>'+esc(sickMsg(f,t))+'</p><label class="chk"><input type="checkbox" id="sickok" onchange="$(\'#err\').textContent=\'\'"'+(was?" checked":"")+'> E kam lexuar dhe e konfirmoj</label>'}else sb2.innerHTML="";
+  $("#left").innerHTML=sick?'':ltype=="extra"?'Puna extra shtohet në orarin tuaj pasi ta miratojë administratori.':no?'<span class="err" style="display:block;margin:0">'+no+'</span>':a?'Ju mbeten <b style="color:var(--tx)">'+(a-held(myAbs,ltype,session.user.id))+' ditë</b> për këtë lloj pushimi në '+Y+'.':'';
   $("#go").disabled=!!no;
+}
+const fmtD=s=>s.split("-").reverse().join(".");
+function sickMsg(f,t){
+  const first=(me.full_name||"").trim().split(/\s+/)[0]||me.full_name,td=today(),one=!f||!t||f==t,day=one?(f||td):null;
+  const when=one?(day==td?"dita e sotme ("+fmtD(day)+") do të zbritet":"dita "+fmtD(day)+" do të zbritet"):"ditët "+fmtD(f)+" – "+fmtD(t)+" do të zbriten";
+  return "Përshëndetje "+first+", faleminderit për njoftimin dhe shërim të shpejtë. Ju njoftojmë se ditët e pushimit mjekësor i keni përfunduar, prandaj "+when+" nga ditët e punës. Për pyetje, na kontaktoni.";
 }
 function noLeft(k){
   const a=T[k][1],U=session.user.id;if(!a)return "";
@@ -601,8 +610,10 @@ async function send(){
   const f=$("#from").value,t=$("#to").value,d=+$("#days").value,note=$("#note").value.trim(),file=$("#file")&&$("#file").files[0],er=$("#err");
   er.textContent="";
   if(!ltype){er.textContent="Zgjidhni llojin e pushimit.";return}
-  const no=noLeft(ltype);if(no){er.textContent=no;return}
-  const a=T[ltype][1],left=a?a-held(myAbs,ltype,session.user.id):1e9,med=ltype=="mjekesor"&&d>3,shift=$("#shift").value.trim();
+  const sick=ltype=="mjekesor"&&!!noLeft("mjekesor");
+  const no=sick?"":noLeft(ltype);if(no){er.textContent=no;return}
+  if(sick&&!($("#sickok")&&$("#sickok").checked)){er.textContent="Konfirmoni njoftimin për ditët e pushimit mjekësor.";return}
+  const a=sick?0:T[ltype][1],left=a?a-held(myAbs,ltype,session.user.id):1e9,med=ltype=="mjekesor"&&d>3,shift=$("#shift").value.trim();
   if(ltype=="extra"&&!/^\d{1,2}(:\d{2})?\s*-\s*\d{1,2}(:\d{2})?$/.test(shift)){er.textContent="Shkruani orarin e punës extra, p.sh. 08-16.";return}
   if(!f||!t||t<f||!(d>0)){er.textContent="Zgjidhni datat e sakta.";return}
   if(d>span(f,t)){er.textContent="Ditët nuk mund të jenë më shumë se periudha e zgjedhur.";return}
@@ -615,14 +626,14 @@ async function send(){
     const u=await sb.storage.from("documents").upload(path,file,{contentType:file.type});
     if(u.error){er.textContent="Ngarkimi i dëshmisë dështoi: "+u.error.message;$("#go").disabled=false;return}
   }
-  const r=await sb.from("absences").insert({user_id:session.user.id,leave_type:ltype,from_date:f,to_date:t,days:d,note:note||null,doc_path:path,shift:ltype=="extra"?shift.replace(/\s/g,""):null});
+  const r=await sb.from("absences").insert({user_id:session.user.id,leave_type:sick?"mjekesor_pp":ltype,from_date:f,to_date:t,days:d,note:sick?("Konfirmuar nga stafi: "+sickMsg(f,t)+(note?"\n"+note:"")).slice(0,1000):(note||null),doc_path:path,shift:ltype=="extra"?shift.replace(/\s/g,""):null});
   if(r.error){
     if(path)await sb.storage.from("documents").remove([path]);
     er.textContent="Dërgimi dështoi: "+r.error.message;$("#go").disabled=false;return;
   }
   const wasExtra=ltype=="extra";
   $("#from").value="";$("#to").value="";$("#days").value="";$("#note").value="";$("#shift").value="";ltype="";
-  flash=wasExtra?"Puna extra u raportua. Shtohet në orar pasi ta miratojë administratori.":"Kërkesa u dërgua. Pushimi llogaritet pasi ta miratojë administratori.";
+  flash=wasExtra?"Puna extra u raportua. Shtohet në orar pasi ta miratojë administratori.":sick?"Njoftimi u dërgua. Ditët zbriten nga ditët e punës pasi t'i miratojë administratori.":"Kërkesa u dërgua. Pushimi llogaritet pasi ta miratojë administratori.";
   await load();
 }
 async function del(id){
@@ -671,18 +682,18 @@ async function loadPay(){
 function payView(){
   const y=pmon.slice(0,4);
   let h='<div class="card"><div class="hd"><h2>Pagat</h2><div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center"><input type="month" id="pm" value="'+pmon+'" onchange="if(this.value){pmon=this.value;loadPay()}" style="width:auto;margin:0"><button class="btn ol sm" onclick="payCsv()"'+(pay&&pay.length?'':' disabled')+'>Shkarko Excel</button><button class="btn sm" onclick="payEd=!payEd;draw()">'+(payEd?"Mbyll ndryshimin":"Ndrysho pagat bazë")+'</button></div></div>';
-  h+='<p class="mut" style="font-size:13px;margin:-4px 0 12px">Paga ditore = paga bazë / 22. Totali = paga bazë + ditët extra × paga ditore + festat zyrtare në orar × paga ditore. Part time: ditët e punës × paga ditore.</p>';
+  h+='<p class="mut" style="font-size:13px;margin:-4px 0 12px">Paga ditore = paga bazë / 22. Totali = paga bazë + ditët extra × paga ditore + festat zyrtare në orar × paga ditore − ditët mjekësore pa pagesë × paga ditore. Part time: ditët e punës × paga ditore.</p>';
   if(payErr)h+='<p class="err">'+esc(payErr)+'</p>';
   else if(!pay)h+='<p class="mut">Duke llogaritur…</p>';
   else if(!pay.length)h+='<p class="mut">Nuk ka punonjës në listë.</p>';
   else{
     const sum=k=>pay.reduce((s,r)=>s+(+r[k]||0),0);
-    h+='<div class="scroll"><table class="pay"><tr><th>Emri</th><th>Paga bazë</th><th>Ditë pune</th><th>Punë extra</th><th>Festa zyrtare</th><th>Totali</th></tr>';
+    h+='<div class="scroll"><table class="pay"><tr><th>Emri</th><th>Paga bazë</th><th>Ditë pune</th><th>Punë extra</th><th>Festa zyrtare</th><th>Zbritje</th><th>Totali</th></tr>';
     h+=pay.map(r=>{
       const base=payEd?'<div style="display:flex;gap:6px;min-width:190px"><input id="pmo_'+r.person_id+'" type="number" min="0" step="0.01" placeholder="Mujore €" value="'+(r.monthly??"")+'" style="margin:0;padding:8px 10px"><input id="pda_'+r.person_id+'" type="number" min="0" step="0.01" placeholder="Ditore € (part time)" value="'+(r.monthly==null&&r.daily_rate!=null?r.daily_rate:"")+'" style="margin:0;padding:8px 10px"></div>'
         :r.missing_base?'<span class="badge w">Mungon paga</span>':r.monthly!=null?eur(r.monthly):'<span class="badge t">Part time</span>';
-      return '<tr><td><b>'+esc(r.name)+'</b>'+(r.position?'<div class="mut" style="font-size:12px">'+esc(r.position)+'</div>':'')+'</td><td>'+base+(r.daily_rate!=null&&!payEd?'<div class="mut" style="font-size:12px">'+eur(r.daily_rate)+' / ditë</div>':'')+'</td><td>'+r.work_days+'</td><td>'+(r.extra_days?r.extra_days+' ditë<div class="mut" style="font-size:12px">+'+eur(r.extra_pay)+'</div>':'—')+'</td><td'+(r.holiday_list?' title="'+esc(r.holiday_list)+'"':'')+'>'+(r.holiday_days?r.holiday_days+' ditë<div class="mut" style="font-size:12px">+'+eur(r.holiday_pay)+'</div>':'—')+'</td><td><b>'+eur(r.total)+'</b></td></tr>'}).join("");
-    h+='<tr class="tot"><td><b>Gjithsej</b></td><td>'+eur(sum("base_pay"))+'</td><td></td><td>'+eur(sum("extra_pay"))+'</td><td>'+eur(sum("holiday_pay"))+'</td><td><b>'+eur(sum("total"))+'</b></td></tr></table></div>';
+      return '<tr><td><b>'+esc(r.name)+'</b>'+(r.position?'<div class="mut" style="font-size:12px">'+esc(r.position)+'</div>':'')+'</td><td>'+base+(r.daily_rate!=null&&!payEd?'<div class="mut" style="font-size:12px">'+eur(r.daily_rate)+' / ditë</div>':'')+'</td><td>'+r.work_days+'</td><td>'+(r.extra_days?r.extra_days+' ditë<div class="mut" style="font-size:12px">+'+eur(r.extra_pay)+'</div>':'—')+'</td><td'+(r.holiday_list?' title="'+esc(r.holiday_list)+'"':'')+'>'+(r.holiday_days?r.holiday_days+' ditë<div class="mut" style="font-size:12px">+'+eur(r.holiday_pay)+'</div>':'—')+'</td><td>'+(r.unpaid_days?'<span style="color:var(--bad)">'+r.unpaid_days+' ditë</span><div class="mut" style="font-size:12px">−'+eur(r.unpaid_pay)+'</div>':'—')+'</td><td><b>'+eur(r.total)+'</b></td></tr>'}).join("");
+    h+='<tr class="tot"><td><b>Gjithsej</b></td><td>'+eur(sum("base_pay"))+'</td><td></td><td>'+eur(sum("extra_pay"))+'</td><td>'+eur(sum("holiday_pay"))+'</td><td>'+(sum("unpaid_pay")?'−'+eur(sum("unpaid_pay")):'')+'</td><td><b>'+eur(sum("total"))+'</b></td></tr></table></div>';
     if(payEd)h+='<p class="err" id="perr"></p><div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn p" id="pgo" onclick="savePay()">Ruaj pagat</button><button class="btn" onclick="payEd=false;draw()">Anulo</button></div>';
     h+='<p class="mut" style="font-size:12px;margin-top:8px">Ditët merren nga orari: ditët extra janë ato të shënuara si extra në orar ose kërkesat "Punë extra" të miratuara.</p>';
   }
@@ -719,9 +730,9 @@ async function delHol(d){
 }
 function payCsv(){
   const qq=v=>'"'+String(v==null?"":v).replace(/"/g,'""')+'"',n=v=>v==null?"":(+v).toFixed(2).replace(".",",");
-  let c="Emri;Pozita;Paga bazë;Paga ditore;Ditë pune;Ditë extra;Festa;Festat;Shtesa extra;Shtesa festash;Totali\n";
-  pay.forEach(r=>{c+=[qq(r.name),qq(r.position),r.monthly==null?qq("Part time"):n(r.monthly),n(r.daily_rate),r.work_days,r.extra_days,r.holiday_days,qq(r.holiday_list),n(r.extra_pay),n(r.holiday_pay),n(r.total)].join(";")+"\n"});
-  c+=[qq("Gjithsej"),"",n(pay.reduce((s,r)=>s+(+r.base_pay||0),0)),"","","","","",n(pay.reduce((s,r)=>s+(+r.extra_pay||0),0)),n(pay.reduce((s,r)=>s+(+r.holiday_pay||0),0)),n(pay.reduce((s,r)=>s+(+r.total||0),0))].join(";")+"\n";
+  let c="Emri;Pozita;Paga bazë;Paga ditore;Ditë pune;Ditë extra;Festa;Festat;Shtesa extra;Shtesa festash;Ditë mjekësore pa pagesë;Zbritje;Totali\n";
+  pay.forEach(r=>{c+=[qq(r.name),qq(r.position),r.monthly==null?qq("Part time"):n(r.monthly),n(r.daily_rate),r.work_days,r.extra_days,r.holiday_days,qq(r.holiday_list),n(r.extra_pay),n(r.holiday_pay),r.unpaid_days||0,n(r.unpaid_pay),n(r.total)].join(";")+"\n"});
+  c+=[qq("Gjithsej"),"",n(pay.reduce((s,r)=>s+(+r.base_pay||0),0)),"","","","","",n(pay.reduce((s,r)=>s+(+r.extra_pay||0),0)),n(pay.reduce((s,r)=>s+(+r.holiday_pay||0),0)),"",n(pay.reduce((s,r)=>s+(+r.unpaid_pay||0),0)),n(pay.reduce((s,r)=>s+(+r.total||0),0))].join(";")+"\n";
   const a=document.createElement("a");a.href=URL.createObjectURL(new Blob(["\ufeff"+c],{type:"text/csv"}));a.download="pagat-"+pmon+".csv";a.click();
 }
 let ovm=today().slice(0,7),ov=null,ovErr="",ovBusy=false,ovSel=null;
@@ -739,7 +750,7 @@ function ovShift(n){const [y,m]=ovm.split("-").map(Number),d=new Date(y,m-1+n,1)
 const isShift=v=>/^\s*\d{1,2}(:\d{2})?\s*[-–]\s*\d{1,2}/.test(String(v||""));
 const ovCode=v=>{const t=String(v||"").trim(),c=sCls(t);if(c=="sl")return /mjek/i.test(t)?"MJ":"V";if(c=="so")return "P";const m=t.match(/^(\d{1,2})(?::\d{2})?\s*[-–]\s*(\d{1,2})/);return m?m[1].padStart(2,"0")+"-"+m[2].padStart(2,"0"):t.slice(0,4)};
 const absOn=(uid,d)=>uid?allAbs.filter(a=>a.user_id==uid&&st(a)=="approved"&&a.leave_type!="extra"&&a.from_date<=d&&a.to_date>=d):[];
-const absCode=k=>({vjetor:"V",mjekesor:"MJ",papagese:"PP"})[k]||"L";
+const absCode=k=>({vjetor:"V",mjekesor:"MJ",mjekesor_pp:"MJ",papagese:"PP"})[k]||"L";
 // One person's month: per-day cells and totals.
 function ovPerson(p){
   const days=mDays(ovm),es=ov.entries.filter(e=>e.person_id==p.id),hol=new Set(ov.hols.map(x=>x.day));
@@ -792,7 +803,7 @@ function ovDetail(p,x){
   const reqs=uid?allAbs.filter(a=>a.user_id==uid&&+a.from_date.slice(0,4)==yr):[];
   let h='<div class="card" id="ovd"><div class="hd"><div><h2 style="margin:0">'+esc(p.name)+'</h2><p class="mut" style="font-size:13px;margin-top:2px">'+esc(p.position||"Pa pozitë")+' · '+(acc?'Llogaria: '+esc(acc.full_name):'<span class="badge w">Pa llogari të lidhur</span>')+'</p></div><button class="btn sm" onclick="ovSel=null;draw()">Mbyll</button></div>';
   h+='<div class="ovk ovk3">'+[["Turne",x.shifts,"ditë pune"],["Ditë extra",x.extra,pay&&x.extra?"+"+eur(pay.extra_pay):""],["Festa në punë",x.holW,pay&&x.holW?"+"+eur(pay.holiday_pay):""],["Pushimi vjetor "+Y,vj+"<span>/20</span>",Math.max(0,20-vj)+" ditë të mbetura"],["Mjekësor "+Y,mj+"<span>/20</span>",""],["Paga e muajit",pay?(pay.missing_base?"—":eur(pay.total)):"—",pay&&!pay.missing_base?(pay.monthly!=null?"Bazë "+eur(pay.monthly):"Part time · "+eur(pay.daily_rate)+"/ditë"):"Mungon paga bazë"]].map(a=>'<div class="mini"><small>'+a[0]+'</small><b>'+a[1]+'</b>'+(a[2]?'<div class="mut" style="font-size:12px;margin-top:2px">'+a[2]+'</div>':'')+'</div>').join("")+'</div>';
-  if(pay&&!pay.missing_base)h+='<h3 class="ovh">Llogaritja e pagës</h3><div class="ovrow"><span>Paga bazë'+(pay.monthly==null?' ('+x.shifts+' ditë × '+eur(pay.daily_rate)+')':'')+'</span><b>'+eur(pay.base_pay)+'</b></div><div class="ovrow"><span>Ditë extra: '+pay.extra_days+' × '+eur(pay.daily_rate)+'</span><b>'+eur(pay.extra_pay)+'</b></div><div class="ovrow"><span>Festa zyrtare: '+pay.holiday_days+' × '+eur(pay.daily_rate)+(pay.holiday_list?' <span class="mut">('+esc(pay.holiday_list)+')</span>':'')+'</span><b>'+eur(pay.holiday_pay)+'</b></div><div class="ovrow tot"><span>Totali</span><b>'+eur(pay.total)+'</b></div>';
+  if(pay&&!pay.missing_base)h+='<h3 class="ovh">Llogaritja e pagës</h3><div class="ovrow"><span>Paga bazë'+(pay.monthly==null?' ('+x.shifts+' ditë × '+eur(pay.daily_rate)+')':'')+'</span><b>'+eur(pay.base_pay)+'</b></div><div class="ovrow"><span>Ditë extra: '+pay.extra_days+' × '+eur(pay.daily_rate)+'</span><b>'+eur(pay.extra_pay)+'</b></div><div class="ovrow"><span>Festa zyrtare: '+pay.holiday_days+' × '+eur(pay.daily_rate)+(pay.holiday_list?' <span class="mut">('+esc(pay.holiday_list)+')</span>':'')+'</span><b>'+eur(pay.holiday_pay)+'</b></div>'+(pay.unpaid_days?'<div class="ovrow"><span>Pushim mjekësor pa pagesë: '+pay.unpaid_days+' × '+eur(pay.daily_rate)+'</span><b style="color:var(--bad)">−'+eur(pay.unpaid_pay)+'</b></div>':'')+'<div class="ovrow tot"><span>Totali</span><b>'+eur(pay.total)+'</b></div>';
   h+='<h3 class="ovh">Ditët extra · '+mLabel(ovm)+'</h3>'+(x.extras.length?x.extras.map(e=>'<div class="ovrow"><b>'+e.day.split("-").reverse().join(".")+'</b><span><span class="oc sx" style="display:inline-block;padding:0 10px">'+esc(e.value)+'</span></span><span class="mut">'+(e.absence_id?'Nga kërkesa e miratuar':'Nga orari')+'</span></div>').join(""):'<p class="mut">Nuk ka ditë extra.</p>');
   h+='<h3 class="ovh">Pushimet · '+mLabel(ovm)+'</h3>'+(x.leaves.length?x.leaves.map(l=>'<div class="ovrow"><b>'+l.d.split("-").reverse().join(".")+'</b><span>'+esc(l.t)+'</span></div>').join(""):'<p class="mut">Nuk ka pushime këtë muaj.</p>');
   if(uid)h+='<h3 class="ovh">Kërkesat në aplikacion · '+yr+'</h3>'+(reqs.length?reqs.map(e=>entry(e,false)).join(""):'<p class="mut">Nuk ka kërkesa.</p>');
