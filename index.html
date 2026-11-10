@@ -702,12 +702,12 @@ function ovPerson(p){
   const days=mDays(ovm),es=ov.entries.filter(e=>e.person_id==p.id),hol=new Set(ov.hols.map(x=>x.day));
   let shifts=0,extra=0,leave=0,holW=0;const cells=[],extras=[],leaves=[],holList=[];
   days.forEach(d=>{
-    const de=es.filter(e=>e.day==d),reg=de.filter(e=>!e.is_extra),ex=de.filter(e=>e.is_extra&&isShift(e.value)),ab=absOn(p.user_id,d);
-    const work=de.some(e=>isShift(e.value)),lv=reg.find(e=>!isShift(e.value)&&sCls(e.value)=="sl")||null;
+    const star=e=>e.is_extra&&String(e.value).includes("*"),de=es.filter(e=>e.day==d),reg=de.filter(e=>!e.is_extra),ex=de.filter(e=>e.is_extra&&isShift(e.value)&&!star(e)),sw=de.filter(star),ab=absOn(p.user_id,d);
+    const work=de.some(e=>isShift(e.value)&&!star(e)),lv=reg.find(e=>!isShift(e.value)&&sCls(e.value)=="sl")||null;
     if(work)shifts++;if(ex.length){extra++;ex.forEach(e=>extras.push(e))}
     if(work&&hol.has(d)){holW++;holList.push(d)}
     if(lv||ab.length){leave++;leaves.push({d,t:lv?sTxt(lv.value):T[ab[0].leave_type][0]})}
-    cells.push({d,reg,ex,ab,lv});
+    cells.push({d,reg,ex,sw,ab,lv});
   });
   const pay=ov.pay.find(x=>x.person_id==p.id)||null;
   return {cells,shifts,extra,leave,holW,extras,leaves,holList,pay};
@@ -732,11 +732,11 @@ function ovView(){
     const pay=x.pay;
     h+='<tr class="'+(ovSel==p.id?"on":"")+'"><td class="nm"><button class="lnk" onclick="ovSel=ovSel==\''+p.id+'\'?null:\''+p.id+'\';draw();setTimeout(()=>{const c=document.getElementById(\'ovd\');if(c)c.scrollIntoView({block:\'start\',behavior:\'smooth\'})},30)">'+esc(p.name)+'</button>'+(p.user_id?'':'<span class="dot" title="Pa llogari të lidhur"></span>')+'</td><td class="sm2">'+x.shifts+'</td><td class="sm2">'+(x.extra||"·")+'</td><td class="sm2">'+(x.leave||"·")+'</td><td class="sm2">'+(x.holW||"·")+'</td><td class="sm2 pay">'+(pay?(pay.missing_base?'<span class="badge w">—</span>':eur(pay.total).replace(" €","")):"—")+'</td>';
     h+=x.cells.map(c=>{
-      const r=c.reg[0],cls=c.lv?"sl":r?sCls(r.value):c.ab.length?"sl":"se",txt=c.lv?ovCode(c.lv.value):r?ovCode(r.value):c.ab.length?absCode(c.ab[0].leave_type):"",tip=[...c.reg.map(e=>e.value),...c.ex.map(e=>"Extra "+e.value),...c.ab.map(a=>T[a.leave_type][0]),hol[c.d]?"Festë: "+hol[c.d]:""].filter(Boolean).join(" · ");
-      return '<td class="'+(hol[c.d]?"hol":"")+'"'+(tip?' title="'+esc(p.name+" · "+c.d.split("-").reverse().join(".")+": "+tip)+'"':'')+'><span class="oc '+cls+'">'+esc(txt)+'</span>'+(c.ex.length?'<span class="oc sx ex">+'+esc(ovCode(c.ex[0].value))+'</span>':'')+'</td>'}).join("");
+      const r=c.reg[0],cls=c.lv?"sl":r?sCls(r.value):c.ab.length?"sl":"se",txt=c.lv?ovCode(c.lv.value):r?ovCode(r.value):c.ab.length?absCode(c.ab[0].leave_type):"",tip=[...c.reg.map(e=>e.value),...c.ex.map(e=>"Extra "+e.value),...c.sw.map(e=>e.value+" (me *, nuk llogaritet extra)"),...c.ab.map(a=>T[a.leave_type][0]),hol[c.d]?"Festë: "+hol[c.d]:""].filter(Boolean).join(" · ");
+      return '<td class="'+(hol[c.d]?"hol":"")+'"'+(tip?' title="'+esc(p.name+" · "+c.d.split("-").reverse().join(".")+": "+tip)+'"':'')+'><span class="oc '+cls+'">'+esc(txt)+'</span>'+(c.ex.length?'<span class="oc sx ex">+'+esc(ovCode(c.ex[0].value))+'</span>':c.sw.length?'<span class="oc so ex">'+esc(ovCode(c.sw[0].value))+'*</span>':'')+'</td>'}).join("");
     h+='</tr>';
   });
-  h+='</table></div><div class="legend"><span class="sm">Paradite</span><span class="sa">Pasdite</span><span class="sn">Natë</span><span class="sx">+ Extra</span><span class="sl">V Vjetor · MJ Mjekësor · L Leje</span><span class="so">P Pushim</span><span class="ovhl">Festë zyrtare</span><span style="background:none;color:var(--mut)"><i class="dot"></i> pa llogari të lidhur</span></div></div>';
+  h+='</table></div><div class="legend"><span class="sm">Paradite</span><span class="sa">Pasdite</span><span class="sn">Natë</span><span class="sx">+ Extra</span><span class="so">* jo extra</span><span class="sl">V Vjetor · MJ Mjekësor · L Leje</span><span class="so">P Pushim</span><span class="ovhl">Festë zyrtare</span><span style="background:none;color:var(--mut)"><i class="dot"></i> pa llogari të lidhur</span></div></div>';
   const s=ovSel&&D.find(r=>r.p.id==ovSel);
   if(s)h+=ovDetail(s.p,s.x);
   if(mh.length)h+='<div class="card"><h2>Festat zyrtare · '+mLabel(ovm)+'</h2>'+mh.map(f=>{const w=D.filter(r=>r.x.holList.includes(f.day)).map(r=>r.p.name);return '<div class="ovrow"><b>'+f.day.split("-").reverse().join(".")+'</b><span>'+esc(f.name)+'</span><span class="mut">'+(w.length?'Në punë: '+esc(w.join(", "))+' (+1 mëditje secili)':'Askush në orar')+'</span></div>'}).join("")+'</div>';
