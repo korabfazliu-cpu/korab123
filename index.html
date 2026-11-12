@@ -89,6 +89,13 @@ main.wrap{position:relative;margin-top:-64px;padding-bottom:20px;display:flex;fl
 .ovrow{display:flex;gap:12px;align-items:center;justify-content:space-between;flex-wrap:wrap;padding:9px 0;border-bottom:1px solid var(--bd);font-size:13px}
 .ovrow>span:first-of-type{flex:1}.ovrow.tot{border-bottom:0;font-size:15px}
 tr.arm td{background:#FFF8F7}
+.chkf{margin-top:6px}.chki{padding:10px 0;border-bottom:1px solid var(--bd)}.chki.todo .chkt{color:var(--tx)}.chkt{font-weight:600;font-size:14px;margin-bottom:8px}
+.seg{display:flex;gap:6px;flex-wrap:wrap}.seg button{flex:1;min-width:92px;height:40px;border-radius:999px;border:1.5px solid var(--bd);background:#fff;font:600 13px Montserrat,sans-serif;color:var(--mut);cursor:pointer}
+.seg button.ok.on{background:#E3F6EA;border-color:#2E9E5B;color:#17703C}.seg button.jo.on{background:#FDE7E7;border-color:#D64545;color:#A32020}.seg button.in.on{background:#FFF1D6;border-color:#E0A21B;color:#8A5A00}
+.chkn{margin-top:8px!important;height:38px!important;font-size:13px!important}
+.chs{display:flex;gap:6px;flex-wrap:wrap;margin-top:4px}.chs i{font-style:normal;font-size:12px;font-weight:600;padding:2px 8px;border-radius:999px}.chs .ok,.cha.ok{background:#E3F6EA;color:#17703C}.chs .jo,.cha.jo{background:#FDE7E7;color:#A32020}.chs .in,.cha.in{background:#FFF1D6;color:#8A5A00}
+.cha{font-size:12px;font-weight:700;padding:3px 10px;border-radius:999px;white-space:nowrap}.chkt2 td{white-space:normal}.chkd{padding:4px 0 10px}.chkadm{padding:10px 0 16px;border-bottom:1px solid var(--bd)}
+.tsec{margin:12px 0;padding:12px;border:1px solid var(--bd);border-radius:14px}.tsec textarea{margin-top:8px}
 .conf{margin-top:14px;padding:14px 16px;border-radius:16px;background:#FFF6E5;border:1px solid #FFD58A;font-size:14px}.conf.ok{background:#EAF7EF;border-color:#9ED9B4}.warn.rem{align-items:center;flex-wrap:wrap;margin-bottom:16px}.warn.rem span{flex:1;min-width:220px}
 .ntf{border:2px solid var(--blue)}.ntfi{padding:12px 0;border-top:1px solid var(--bd)}.ntfi:first-of-type{border-top:0;padding-top:4px}.ntfi b{display:block}.ntfi p{margin:8px 0 10px;font-size:14px;line-height:1.5}
 .sgt tr.mine td{background:#EEF3FF}.sgt tr.mine td:first-child{border-radius:10px 0 0 10px}.sgt tr.mine td:last-child{border-radius:0 10px 10px 0}.sgt tr.mine .nm{color:var(--blue);font-weight:800;background:#EEF3FF;box-shadow:-18px 0 0 #EEF3FF}.chip.minec{outline:2px solid var(--blue)}
@@ -244,7 +251,7 @@ const logoBlock=h=>'<span class="logo"><img src="'+LOGO+'" alt="038 Parking Cent
 const FOOT='<p class="foot">© 038 Parking Center · Prishtinë</p>';
 const CIRC=n=>Array.from({length:n},(_,i)=>'<span class="circ c'+(i+1)+'" aria-hidden="true"></span>').join("");
 const authPage=(card,below)=>'<div class="ap">'+CIRC(3)+'<div class="apin">'+logoBlock(56)+'<h1 style="margin-top:34px">Digital HR</h1><div class="card">'+card+'</div>'+(below||'')+'<p class="foot">© 038 Parking Center · Prishtinë</p></div></div>';
-let openS={hist:false,bal:false,hol:false,acc:false,rep:false,slip:false},fKeep={},ltype="",menu=false,sub=null,session=null,me=null,mode="in",tab="me",myAbs=[],profs=[],allAbs=[],armed=null,msg="",q="",flash="",recovering=false,editing=null,opening=[],limp=null,sched={people:[],entries:[]},smonth=today().slice(0,7),sedit=null,imp=null,showSec=false;
+let openS={hist:false,bal:false,hol:false,acc:false,rep:false,slip:false,chk:false},fKeep={},ltype="",menu=false,sub=null,session=null,me=null,mode="in",tab="me",myAbs=[],profs=[],allAbs=[],armed=null,msg="",q="",flash="",recovering=false,editing=null,opening=[],limp=null,sched={people:[],entries:[]},smonth=today().slice(0,7),sedit=null,imp=null,showSec=false;
 
 sb.auth.onAuthStateChange((ev,s)=>{
   if(ev=="TOKEN_REFRESHED")return;
@@ -262,6 +269,7 @@ async function load(){
     myAbs=a.data||[];
     try{const ss=await sb.from("payroll_slips").select("*").eq("user_id",uid).order("year",{ascending:false}).order("month",{ascending:false});slips=ss.data||[]}catch(e){slips=[]}
     try{const nn=await sb.from("notifications").select("*").eq("user_id",uid).order("created_at",{ascending:false});notes=(nn.data||[]).slice(0,20)}catch(e){notes=[]}
+    await loadChk();
     if(me.role=="admin"){
       const [p,b]=await Promise.all([sb.from("profiles").select("*").order("full_name"),sb.from("absences").select("*").order("from_date",{ascending:false})]);
       profs=p.data||[];allAbs=b.data||[];loadEmails();await loadCurConf();
@@ -276,7 +284,7 @@ function shell(inner){
   const adm=me.role=="admin",pend=profs.filter(x=>x.status=="pending").length+allAbs.filter(a=>st(a)=="pending").length;
   let h='<header class="nhead">'+CIRC(2)+'<div class="wrap"><div class="hrow">'+logoBlock(36)+'<button class="icon-btn" onclick="out()" aria-label="Dil" title="Dil">'+I.out+'</button></div>';
   h+='<div class="who"><p>Mirë se vini,</p><h1>'+esc(me.full_name)+'</h1><p>'+esc(me.position)+' · Kuleta digjitale personale</p></div>';
-  if(adm)h+='<nav class="tabs" aria-label="Seksionet"><button class="'+(tab=="ov"?"on":"")+'" onclick="go(\'ov\')">Pasqyra</button><button class="'+(tab=="req"?"on":"")+'" onclick="go(\'req\')">Kërkesat'+(pend?' <span class="cnt">'+pend+'</span>':'')+'</button><button class="'+(tab=="staff"?"on":"")+'" onclick="go(\'staff\')">Stafi</button><button class="'+(tab=="sched"?"on":"")+'" onclick="go(\'sched\')">Orari</button><button class="'+(tab=="pay"?"on":"")+'" onclick="go(\'pay\')">Pagat</button><button class="'+(tab=="me"?"on":"")+'" onclick="go(\'me\')">Pushimet e mia</button></nav>';
+  if(adm)h+='<nav class="tabs" aria-label="Seksionet"><button class="'+(tab=="ov"?"on":"")+'" onclick="go(\'ov\')">Pasqyra</button><button class="'+(tab=="req"?"on":"")+'" onclick="go(\'req\')">Kërkesat'+(pend?' <span class="cnt">'+pend+'</span>':'')+'</button><button class="'+(tab=="staff"?"on":"")+'" onclick="go(\'staff\')">Stafi</button><button class="'+(tab=="sched"?"on":"")+'" onclick="go(\'sched\')">Orari</button><button class="'+(tab=="pay"?"on":"")+'" onclick="go(\'pay\')">Pagat</button><button class="'+(tab=="chk"?"on":"")+'" onclick="go(\'chk\')">Kontrollat'+(chkPend()?' <span class="badge t">'+chkPend()+'</span>':'')+'</button><button class="'+(tab=="me"?"on":"")+'" onclick="go(\'me\')">Pushimet e mia</button></nav>';
   return h+'</div></header><main class="wrap">'+inner+'</main>'+FOOT;
 }
 
@@ -291,7 +299,7 @@ function draw(){
     return app.innerHTML=authPage('<h2>'+(me.status=="pending"?"Llogaria pret miratimin":"Llogaria u refuzua")+'</h2><p class="mut">'+(me.status=="pending"?"Administratori duhet ta miratojë llogarinë tuaj para se të hyni. Kthehuni më vonë.":"Administratori nuk e miratoi këtë llogari. Kontaktoni menaxherin.")+'</p><div style="display:flex;gap:8px;margin-top:18px"><button class="btn p" onclick="load()">Rifresko</button><button class="btn" onclick="out()">Dil</button></div>');
   }
   const adm=me.role=="admin",prevS=[...document.querySelectorAll(".sg")].map(e=>e.scrollLeft);
-  app.innerHTML=shell(adm&&tab=="req"?reqView():adm&&tab=="staff"?staffView():adm&&tab=="sched"?schedView(true):adm&&tab=="pay"?payView():adm&&tab=="ov"?ovView():notifCard()+meView()+slipCard());
+  app.innerHTML=shell(adm&&tab=="req"?reqView():adm&&tab=="staff"?staffView():adm&&tab=="sched"?schedView(true):adm&&tab=="pay"?payView():adm&&tab=="ov"?ovView():adm&&tab=="chk"?chkAdminView():notifCard()+meView()+chkCard()+slipCard());
   if($("#from")){$("#from").value=keep.f||"";$("#to").value=keep.t||"";$("#note").value=keep.n||"";$("#shift").value=keep.s||"";if(keep.d){$("#days").value=keep.d;calc(1)}else calc()}
   sgFocus(prevS);
 }
@@ -913,6 +921,115 @@ async function delUser(id){
   if(error){delErr="Fshirja dështoi: "+error.message;draw();return}
   delArm=null;delErr="";delMsg="Llogaria e "+(p?p.full_name:"përdoruesit")+" u fshi.";
   await load();
+}
+// ---- Kontrollat (inspection checklists): visible only to the admin and staff with check_access ----
+let chk={access:false,tpls:[],reps:[],acc:[]},chkEdit=null,chkOpen=null,tplEd=null,chkMsg="";
+const ANS={ok:["Në rregull","ok"],jo:["Jo","jo"],int:["Intervenim","in"]};
+async function loadChk(){
+  try{
+    const adm=me&&me.role=="admin";
+    if(adm)chk.access=true;
+    else{const a=await sb.from("check_access").select("*").eq("user_id",session.user.id).maybeSingle();chk.access=!!(a&&a.data)}
+    if(!chk.access){chk.tpls=[];chk.reps=[];return}
+    const [t,r]=await Promise.all([sb.from("check_templates").select("*").order("created_at"),sb.from("check_reports").select("*").order("created_at",{ascending:false})]);
+    chk.tpls=t.data||[];chk.reps=r.data||[];
+    if(adm){const c=await sb.from("check_access").select("*");chk.acc=c.data||[]}
+  }catch(e){chk.access=false}
+}
+const nowHM=()=>{const d=new Date();return String(d.getHours()).padStart(2,"0")+":"+String(d.getMinutes()).padStart(2,"0")};
+const chkCount=r=>{const c={ok:0,jo:0,int:0,none:0};(r.sections||[]).forEach(s=>s.items.forEach(i=>c[i.ans||"none"]++));return c};
+const chkStat=s=>s=="draft"?'<span class="badge w">Draft</span>':s=="submitted"?'<span class="badge t">Dërguar</span>':s=="returned"?'<span class="badge r">Kthyer për korrigjim</span>':'<span class="badge o">Shqyrtuar</span>';
+const chkSum=r=>{const c=chkCount(r);return '<span class="chs"><i class="ok">'+c.ok+' në rregull</i>'+(c.jo?'<i class="jo">'+c.jo+' jo</i>':'')+(c.int?'<i class="in">'+c.int+' intervenim</i>':'')+'</span>'};
+// staff: start / continue / send
+function chkNew(tid){const t=chk.tpls.find(x=>x.id==tid);chkEdit={id:null,template_id:t.id,title:t.title,check_date:today(),check_time:nowHM(),problems:"",sections:t.sections.map(s=>({title:s.title,items:s.items.map(x=>({text:x,ans:null,note:""}))}))};chkMsg="";draw()}
+function chkCont(id){const r=chk.reps.find(x=>x.id==id);chkEdit=JSON.parse(JSON.stringify(r));chkMsg="";draw()}
+function chkAns(si,ii,a){chkEdit.sections[si].items[ii].ans=a;draw()}
+function chkForm(){
+  const e=chkEdit;let h='<div class="chkf"><div class="hd"><h3 style="margin:0">'+esc(e.title)+'</h3>'+(e.status=="returned"?chkStat("returned"):'')+'</div>';
+  if(e.status=="returned"&&e.admin_comment)h+='<div class="warn">'+I.warn+'<span><b>Komenti i administratorit:</b> '+esc(e.admin_comment)+'</span></div>';
+  h+='<div class="row"><div><label for="cd">Data</label><input type="date" id="cd" value="'+e.check_date+'" oninput="chkEdit.check_date=this.value"></div><div><label for="ct">Ora</label><input type="time" id="ct" value="'+esc(e.check_time||"")+'" oninput="chkEdit.check_time=this.value"></div></div>';
+  e.sections.forEach((s,si)=>{h+='<h3 class="ovh">'+(si+1)+'. '+esc(s.title)+'</h3>'+s.items.map((it,ii)=>'<div class="chki'+(it.ans?'':' todo')+'"><div class="chkt"><span class="mut">'+(ii+1)+'.</span> '+esc(it.text)+'</div><div class="seg">'+Object.entries(ANS).map(([k,[l,c]])=>'<button type="button" class="'+c+(it.ans==k?' on':'')+'" onclick="chkAns('+si+','+ii+',\''+k+'\')">'+l+'</button>').join("")+'</div><input class="chkn" placeholder="Shënim (opsionale)" maxlength="300" value="'+esc(it.note||"")+'" oninput="chkEdit.sections['+si+'].items['+ii+'].note=this.value"></div>').join("")});
+  h+='<h3 class="ovh">'+(e.sections.length+1)+'. Intervenimet që duhet të kryhen</h3><textarea id="cp" rows="4" maxlength="4000" placeholder="Problemi / intervenimi i nevojshëm" oninput="chkEdit.problems=this.value">'+esc(e.problems||"")+'</textarea>';
+  const c=chkCount(e);
+  h+='<p class="mut" style="font-size:13px;margin:10px 0 0">Plotësuar '+(c.ok+c.jo+c.int)+' nga '+(c.ok+c.jo+c.int+c.none)+' pika.</p>'+(chkMsg?'<p class="err">'+esc(chkMsg)+'</p>':'')+'<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:12px"><button class="btn p" id="chsend" onclick="chkSave(true)">Dërgo te administratori</button><button class="btn ol" onclick="chkSave(false)">Ruaj (draft)</button><button class="btn" onclick="chkEdit=null;chkMsg=\'\';draw()">Mbyll</button></div></div>';
+  return h;
+}
+async function chkSave(send){
+  const e=chkEdit,c=chkCount(e);chkMsg="";
+  if(send&&c.none){chkMsg="Plotësoni të gjitha pikat ("+c.none+" pa përgjigje), pastaj dërgojeni.";const f=document.querySelector(".chki.todo");draw();const g=document.querySelector(".chki.todo");if(g)g.scrollIntoView({block:"center",behavior:"smooth"});return}
+  if(send&&(c.jo||c.int)&&!(e.problems||"").trim()&&!e.sections.some(s=>s.items.some(i=>i.ans!="ok"&&(i.note||"").trim()))){chkMsg="Për pikat \"Jo\" ose \"Intervenim\" shkruani një shënim ose plotësoni \"Intervenimet që duhet të kryhen\".";return draw()}
+  if(!e.check_date){chkMsg="Zgjidhni datën.";return draw()}
+  const b=$("#chsend");if(b)b.disabled=true;
+  const row={template_id:e.template_id,title:e.title,check_date:e.check_date,check_time:e.check_time||null,sections:e.sections,problems:(e.problems||"").trim()||null,status:send?"submitted":"draft"};
+  const r=e.id?await sb.from("check_reports").update(row).eq("id",e.id):await sb.from("check_reports").insert(Object.assign({user_id:session.user.id},row));
+  if(r.error){chkMsg="Nuk u ruajt: "+r.error.message;return draw()}
+  chkEdit=null;flash=send?"Kontrolli u dërgua te administratori.":"Kontrolli u ruajt si draft.";await loadChk();draw();
+}
+function chkDetail(r,admin){
+  let h='<div class="chkd">';
+  if(r.admin_comment&&!admin)h+='<div class="warn">'+I.warn+'<span><b>Komenti i administratorit:</b> '+esc(r.admin_comment)+'</span></div>';
+  (r.sections||[]).forEach((s,si)=>{h+='<h3 class="ovh">'+(si+1)+'. '+esc(s.title)+'</h3><div class="scroll"><table class="chkt2"><tr><th>Nr</th><th>Pika e kontrollit</th><th>Gjendja</th><th>Shënim</th></tr>'+s.items.map((it,ii)=>'<tr class="a-'+(it.ans||"none")+'"><td>'+(ii+1)+'</td><td>'+esc(it.text)+'</td><td>'+(it.ans?'<span class="cha '+ANS[it.ans][1]+'">'+ANS[it.ans][0]+'</span>':'—')+'</td><td>'+esc(it.note||"")+'</td></tr>').join("")+'</table></div>'});
+  h+='<h3 class="ovh">Intervenimet që duhet të kryhen</h3><p style="white-space:pre-wrap;margin:0">'+(r.problems?esc(r.problems):'<span class="mut">—</span>')+'</p>';
+  return h+'</div>';
+}
+function chkCard(){
+  if(!chk.access||me.role=="admin")return "";
+  const mine=chk.reps;let h='<div class="card">'+togH("chk","Kontrollat e mia",mine.length);
+  if(!openS.chk&&!chkEdit)return h+'</div>';
+  if(chkEdit)return h+chkForm()+'</div>';
+  h+='<p class="mut" style="font-size:13px;margin:0 0 10px">Këtë seksion e shihni vetëm ju dhe administratori.</p><div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:6px">'+chk.tpls.filter(t=>t.active).map(t=>'<button class="btn p" onclick="chkNew(\''+t.id+'\')">+ Fillo kontroll: '+esc(t.title)+'</button>').join("")+'</div>';
+  h+=mine.length?mine.map(r=>'<div class="req"><div><b>'+fmt(r.check_date)+(r.check_time?' · '+esc(r.check_time):'')+'</b> '+chkStat(r.status)+'<div class="mut" style="font-size:13px">'+esc(r.title)+'</div>'+chkSum(r)+'</div><div>'+(r.status=="draft"||r.status=="returned"?'<button class="btn sm p" onclick="chkCont(\''+r.id+'\')">Vazhdo</button>':'<button class="btn sm" onclick="chkOpen=chkOpen==\''+r.id+'\'?null:\''+r.id+'\';draw()">'+(chkOpen==r.id?'Mbyll':'Shiko')+'</button>')+'</div></div>'+(chkOpen==r.id?chkDetail(r,false):'')).join(""):'<p class="mut">Nuk keni kontrolle ende.</p>';
+  return h+'</div>';
+}
+// admin
+const chkPend=()=>chk.reps.filter(r=>r.status=="submitted").length;
+function chkAdminView(){
+  const sent=chk.reps.filter(r=>r.status!="draft"),nm=id=>(profs.find(p=>p.id==id)||{}).full_name||"—";
+  let h='<div class="card"><div class="hd"><h2>Kontrollat e dërguara</h2>'+(chkPend()?'<span class="badge t">'+chkPend()+' për t\'u shqyrtuar</span>':'')+'</div><p class="mut" style="font-size:13px;margin:-4px 0 10px">Kontrollat i shohin vetëm administratori dhe punëtorët që kanë qasje.</p>';
+  if(chkMsg)h+='<div class="info" style="margin:0 0 10px"><span>'+esc(chkMsg)+'</span></div>';
+  h+=sent.length?sent.map(r=>'<div class="req"><div><b>'+fmt(r.check_date)+(r.check_time?' · '+esc(r.check_time):'')+'</b> · '+esc(nm(r.user_id))+' '+chkStat(r.status)+'<div class="mut" style="font-size:13px">'+esc(r.title)+'</div>'+chkSum(r)+'</div><button class="btn sm" onclick="chkOpen=chkOpen==\''+r.id+'\'?null:\''+r.id+'\';draw()">'+(chkOpen==r.id?'Mbyll':'Shiko')+'</button></div>'+(chkOpen==r.id?chkDetail(r,true)+'<div class="chkadm"><label for="cac">Komenti juaj (opsional)</label><textarea id="cac" rows="2" maxlength="1000">'+esc(r.admin_comment||"")+'</textarea><div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px"><button class="btn p" onclick="chkReview(\''+r.id+'\',\'reviewed\')">Shëno si të shqyrtuar</button><button class="btn" onclick="chkReview(\''+r.id+'\',\'returned\')">Ktheje për korrigjim</button><button class="btn ol" onclick="chkPrint(\''+r.id+'\')">Printo</button></div></div>':'')).join(""):'<p class="mut">Ende nuk është dërguar asnjë kontroll.</p>';
+  h+='</div>';
+  // templates
+  h+='<div class="card"><div class="hd"><h2>Lista e kontrollave</h2>'+(tplEd?'':'<button class="btn ol sm" onclick="tplEd={id:null,title:\'\',sections:[{title:\'\',items:[]}],active:true};draw()">+ Formular i ri</button>')+'</div>';
+  if(tplEd)h+=tplForm();
+  else h+=chk.tpls.map(t=>'<div class="req"><div><b>'+esc(t.title)+'</b> '+(t.active?'<span class="badge o">Aktiv</span>':'<span class="badge w">Joaktiv</span>')+'<div class="mut" style="font-size:13px">'+t.sections.map(s=>esc(s.title)+' ('+s.items.length+')').join(" · ")+'</div></div><button class="btn sm" onclick="tplEd=JSON.parse(JSON.stringify(chk.tpls.find(x=>x.id==\''+t.id+'\')));draw()">Ndrysho</button></div>').join("")||'<p class="mut">Nuk ka formularë.</p>';
+  h+='</div>';
+  // access
+  const ap=profs.filter(p=>p.status=="approved"&&p.role!="admin");
+  h+='<div class="card"><h2>Qasja në Kontrolla</h2><p class="mut" style="font-size:13px;margin:-4px 0 10px">Vetëm punëtorët e shënuar këtu e shohin seksionin "Kontrollat e mia". Të tjerët nuk e shohin as në menu.</p>'+ap.map(p=>'<label class="chk" style="padding:8px 0;border-bottom:1px solid var(--bd)"><input type="checkbox" '+(chk.acc.some(a=>a.user_id==p.id)?'checked':'')+' onchange="chkAccess(\''+p.id+'\',this.checked)"> '+esc(p.full_name)+' <span class="mut" style="font-weight:500">· '+esc(p.position||"")+'</span></label>').join("")+'</div>';
+  return h;
+}
+function tplForm(){
+  const t=tplEd;
+  return '<div class="chkf"><label for="tt">Titulli i formularit</label><input id="tt" maxlength="160" value="'+esc(t.title)+'" oninput="tplEd.title=this.value">'+t.sections.map((s,i)=>'<div class="tsec"><div class="hd"><label for="ts'+i+'" style="margin:0">Seksioni '+(i+1)+'</label>'+(t.sections.length>1?'<button class="btn sm" onclick="tplEd.sections.splice('+i+',1);draw()">Fshi seksionin</button>':'')+'</div><input id="ts'+i+'" maxlength="120" placeholder="p.sh. Kontrolli i pastrimit" value="'+esc(s.title)+'" oninput="tplEd.sections['+i+'].title=this.value"><textarea rows="'+Math.max(4,s.items.length+1)+'" placeholder="Një pikë kontrolli për rresht" oninput="tplEd.sections['+i+'].items=this.value.split(\'\\n\')">'+esc(s.items.join("\n"))+'</textarea></div>').join("")+'<button class="btn sm ol" onclick="tplEd.sections.push({title:\'\',items:[]});draw()">+ Shto seksion</button><label class="chk" style="margin-top:12px"><input type="checkbox" '+(t.active?'checked':'')+' onchange="tplEd.active=this.checked"> Aktiv (punëtori mund ta plotësojë)</label>'+(chkMsg?'<p class="err">'+esc(chkMsg)+'</p>':'')+'<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:12px"><button class="btn p" onclick="tplSave()">Ruaj formularin</button><button class="btn" onclick="tplEd=null;chkMsg=\'\';draw()">Anulo</button></div></div>';
+}
+async function tplSave(){
+  const t=tplEd,secs=t.sections.map(s=>({title:(s.title||"").trim(),items:s.items.map(x=>x.trim()).filter(Boolean)})).filter(s=>s.title||s.items.length);
+  if(!t.title.trim()||!secs.length||secs.some(s=>!s.title||!s.items.length)){chkMsg="Plotësoni titullin dhe për çdo seksion titullin dhe të paktën një pikë.";return draw()}
+  const row={title:t.title.trim(),sections:secs,active:t.active,updated_at:new Date().toISOString()};
+  const r=t.id?await sb.from("check_templates").update(row).eq("id",t.id):await sb.from("check_templates").insert(row);
+  if(r.error){chkMsg="Nuk u ruajt: "+r.error.message;return draw()}
+  tplEd=null;chkMsg="Formulari u ruajt.";await loadChk();draw();
+}
+async function chkAccess(uid,on){
+  const r=on?await sb.from("check_access").insert({user_id:uid}):await sb.from("check_access").delete().eq("user_id",uid);
+  if(r.error)alert("Nuk u ruajt: "+r.error.message);
+  if(on&&!r.error)await sb.from("notifications").insert({user_id:uid,title:"Qasje në Kontrolla",body:"Administratori ju dha qasje te \"Kontrollat e mia\". Aty plotësoni formularët e kontrollit dhe ia dërgoni administratorit."});
+  await loadChk();draw();
+}
+async function chkReview(id,st){
+  const r=chk.reps.find(x=>x.id==id),c=($("#cac")&&$("#cac").value.trim())||null;
+  if(st=="returned"&&!c){chkMsg="Shkruani në koment çfarë duhet korrigjuar.";return draw()}
+  const u=await sb.from("check_reports").update({status:st,admin_comment:c,reviewed_at:new Date().toISOString()}).eq("id",id);
+  if(u.error){chkMsg="Nuk u ruajt: "+u.error.message;return draw()}
+  if(st=="returned")await sb.from("notifications").insert({user_id:r.user_id,title:"Kontrolli u kthye për korrigjim",body:"Kontrolli i "+fmt(r.check_date)+" u kthye për korrigjim: "+c+"\nHapni \"Kontrollat e mia\" → Vazhdo."});
+  chkMsg=st=="returned"?"Kontrolli iu kthye punëtorit për korrigjim.":"Kontrolli u shënua si i shqyrtuar.";chkOpen=null;await loadChk();draw();
+}
+function chkPrint(id){
+  const r=chk.reps.find(x=>x.id==id),nm=(profs.find(p=>p.id==r.user_id)||{}).full_name||"";
+  const w=window.open("","_blank");if(!w)return;
+  w.document.write('<!doctype html><meta charset="utf-8"><title>Kontrolli '+fmt(r.check_date)+'</title><style>body{font:14px Arial,sans-serif;margin:30px;color:#111}h1{font-size:18px;margin:0}h2{font-size:15px;margin:22px 0 8px}table{border-collapse:collapse;width:100%}td,th{border:1px solid #999;padding:6px 8px;text-align:left}th{background:#eee}.x{text-align:center;width:80px}</style><p><b>PARKING CENTER</b></p><h1>'+esc(r.title.toUpperCase())+'</h1><p>Data: '+fmt(r.check_date)+' &nbsp; Ora: '+esc(r.check_time||"")+' &nbsp; Kontrolloi: '+esc(nm)+'</p>'+r.sections.map((s,i)=>'<h2>'+(i+1)+'. '+esc(s.title.toUpperCase())+'</h2><table><tr><th>Nr</th><th>Pika e kontrollit</th><th class="x">Në rregull</th><th class="x">Jo</th><th class="x">Intervenim</th><th>Shënim</th></tr>'+s.items.map((it,j)=>'<tr><td>'+(j+1)+'</td><td>'+esc(it.text)+'</td>'+["ok","jo","int"].map(k=>'<td class="x">'+(it.ans==k?"☒":"☐")+'</td>').join("")+'<td>'+esc(it.note||"")+'</td></tr>').join("")+'</table>').join("")+'<h2>'+(r.sections.length+1)+'. INTERVENIMET QË DUHET TË KRYHEN</h2><table><tr><th>Problemi / Intervenimi i nevojshëm</th></tr><tr><td style="height:80px;white-space:pre-wrap;vertical-align:top">'+esc(r.problems||"")+'</td></tr></table>'+(r.admin_comment?'<p><b>Komenti i administratorit:</b> '+esc(r.admin_comment)+'</p>':'')+'<script>print()<\/script>');
+  w.document.close();
 }
 function csv(){
   const qq=v=>'"'+String(v==null?"":v).replace(/"/g,'""')+'"';
