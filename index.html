@@ -4,6 +4,12 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#00246A">
+<link rel="manifest" href="/manifest.webmanifest">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Digital HR">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <title>Digital HR · 038 Parking Center</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 34 34%22><rect width=%2234%22 height=%2234%22 rx=%228%22 fill=%22%230144FF%22/><circle cx=%2211%22 cy=%2211%22 r=%225%22 fill=%22white%22/><circle cx=%2223%22 cy=%2211%22 r=%225%22 fill=%22white%22 opacity=%22.7%22/><circle cx=%2211%22 cy=%2223%22 r=%225%22 fill=%22white%22 opacity=%22.7%22/><circle cx=%2223%22 cy=%2223%22 r=%225%22 fill=%22white%22/></svg>">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -89,6 +95,7 @@ main.wrap{position:relative;margin-top:-64px;padding-bottom:20px;display:flex;fl
 .ovrow{display:flex;gap:12px;align-items:center;justify-content:space-between;flex-wrap:wrap;padding:9px 0;border-bottom:1px solid var(--bd);font-size:13px}
 .ovrow>span:first-of-type{flex:1}.ovrow.tot{border-bottom:0;font-size:15px}
 tr.arm td{background:#FFF8F7}
+.pushc{border:2px dashed var(--blue)}.pushc p{margin:0 0 12px;font-size:14px;line-height:1.5}.pst{margin:0 0 10px;padding-left:20px;font-size:14px;line-height:1.7}.pushok{font-size:13px;color:var(--mut);margin:-4px 0 14px;padding:0 4px}.lnk2{background:none;border:0;color:var(--blue);font:600 13px Montserrat,sans-serif;cursor:pointer;padding:0 4px;text-decoration:underline}
 .chkf{margin-top:6px}.chki{padding:10px 0;border-bottom:1px solid var(--bd)}.chki.todo .chkt{color:var(--tx)}.chkt{font-weight:600;font-size:14px;margin-bottom:8px}
 .seg{display:flex;gap:6px;flex-wrap:wrap}.seg button{flex:1;min-width:92px;height:40px;border-radius:999px;border:1.5px solid var(--bd);background:#fff;font:600 13px Montserrat,sans-serif;color:var(--mut);cursor:pointer}
 .seg button.ok.on{background:#E3F6EA;border-color:#2E9E5B;color:#17703C}.seg button.jo.on{background:#FDE7E7;border-color:#D64545;color:#A32020}.seg button.in.on{background:#FFF1D6;border-color:#E0A21B;color:#8A5A00}
@@ -270,6 +277,8 @@ async function load(){
     try{const ss=await sb.from("payroll_slips").select("*").eq("user_id",uid).order("year",{ascending:false}).order("month",{ascending:false});slips=ss.data||[]}catch(e){slips=[]}
     try{const nn=await sb.from("notifications").select("*").eq("user_id",uid).order("created_at",{ascending:false});notes=(nn.data||[]).slice(0,20)}catch(e){notes=[]}
     await loadChk();
+    pushCheck().then(()=>draw());
+    try{if(navigator.setAppBadge){const u=notes.filter(n=>!n.read_at).length;u?navigator.setAppBadge(u):navigator.clearAppBadge()}}catch(e){}
     if(me.role=="admin"){
       const [p,b]=await Promise.all([sb.from("profiles").select("*").order("full_name"),sb.from("absences").select("*").order("from_date",{ascending:false})]);
       profs=p.data||[];allAbs=b.data||[];loadEmails();await loadCurConf();
@@ -299,7 +308,7 @@ function draw(){
     return app.innerHTML=authPage('<h2>'+(me.status=="pending"?"Llogaria pret miratimin":"Llogaria u refuzua")+'</h2><p class="mut">'+(me.status=="pending"?"Administratori duhet ta miratojë llogarinë tuaj para se të hyni. Kthehuni më vonë.":"Administratori nuk e miratoi këtë llogari. Kontaktoni menaxherin.")+'</p><div style="display:flex;gap:8px;margin-top:18px"><button class="btn p" onclick="load()">Rifresko</button><button class="btn" onclick="out()">Dil</button></div>');
   }
   const adm=me.role=="admin",prevS=[...document.querySelectorAll(".sg")].map(e=>e.scrollLeft);
-  app.innerHTML=shell(adm&&tab=="req"?reqView():adm&&tab=="staff"?staffView():adm&&tab=="sched"?schedView(true):adm&&tab=="pay"?payView():adm&&tab=="ov"?ovView():adm&&tab=="chk"?chkAdminView():notifCard()+meView()+chkCard()+slipCard());
+  app.innerHTML=shell(adm&&tab=="req"?reqView():adm&&tab=="staff"?staffView():adm&&tab=="sched"?schedView(true):adm&&tab=="pay"?payView():adm&&tab=="ov"?ovView():adm&&tab=="chk"?chkAdminView():notifCard()+pushCard()+meView()+chkCard()+slipCard());
   if($("#from")){$("#from").value=keep.f||"";$("#to").value=keep.t||"";$("#note").value=keep.n||"";$("#shift").value=keep.s||"";if(keep.d){$("#days").value=keep.d;calc(1)}else calc()}
   sgFocus(prevS);
 }
@@ -1066,6 +1075,49 @@ function chkPrint(id){
   const w=window.open("","_blank");if(!w)return;
   w.document.write('<!doctype html><meta charset="utf-8"><title>Kontrolli '+fmt(r.check_date)+'</title><style>body{font:14px Arial,sans-serif;margin:30px;color:#111}h1{font-size:18px;margin:0}h2{font-size:15px;margin:22px 0 8px}table{border-collapse:collapse;width:100%}td,th{border:1px solid #999;padding:6px 8px;text-align:left}th{background:#eee}.x{text-align:center;width:80px}</style><p><b>PARKING CENTER</b></p><h1>'+esc(r.title.toUpperCase())+'</h1><p>Data: '+fmt(r.check_date)+' &nbsp; Ora: '+esc(r.check_time||"")+' &nbsp; Kontrolloi: '+esc(nm)+'</p>'+r.sections.map((s,i)=>'<h2>'+(i+1)+'. '+esc(s.title.toUpperCase())+'</h2><table><tr><th>Nr</th><th>Pika e kontrollit</th><th class="x">Në rregull</th><th class="x">Jo</th><th class="x">Intervenim</th><th>Shënim</th></tr>'+s.items.map((it,j)=>'<tr><td>'+(j+1)+'</td><td>'+esc(it.text)+'</td>'+["ok","jo","int"].map(k=>'<td class="x">'+(it.ans==k?"☒":"☐")+'</td>').join("")+'<td>'+esc(it.note||"")+'</td></tr>').join("")+'</table>').join("")+'<h2>'+(r.sections.length+1)+'. INTERVENIMET QË DUHET TË KRYHEN</h2><table><tr><th>Problemi / Intervenimi i nevojshëm</th></tr><tr><td style="height:80px;white-space:pre-wrap;vertical-align:top">'+esc(r.problems||"")+'</td></tr></table>'+((r.followup||[]).length?'<h2>RIKONTROLLI (JO DHE INTERVENIM)</h2><table><tr><th>Pika</th><th>Rezultati</th><th>Shënim</th><th>Data</th></tr>'+r.followup.map(x=>'<tr><td>'+esc(x.text)+'</td><td>'+(x.res=="done"?"U rregullua":x.res=="notyet"?"Ende jo":"—")+'</td><td>'+esc(x.note||"")+'</td><td>'+(x.at?fmt(x.at):"")+'</td></tr>').join("")+'</table>':'')+(r.admin_comment?'<p><b>Komenti i administratorit:</b> '+esc(r.admin_comment)+'</p>':'')+'<script>print()<\/script>');
   w.document.close();
+}
+// ---- Phone push notifications (PWA + Web Push) ----
+let push={state:"?",msg:""};
+const isIOS=/iphone|ipad|ipod/i.test(navigator.userAgent),isStandalone=matchMedia("(display-mode: standalone)").matches||navigator.standalone===true;
+const b64u=s=>{const p="=".repeat((4-s.length%4)%4),b=atob((s+p).replace(/-/g,"+").replace(/_/g,"/"));return Uint8Array.from(b,c=>c.charCodeAt(0))};
+async function swReg(){if(!("serviceWorker" in navigator))return null;try{return await navigator.serviceWorker.register("/sw.js")}catch(e){return null}}
+async function pushCheck(){
+  const reg=await swReg();
+  if(!reg||!("PushManager" in window)||!("Notification" in window)){push.state=isIOS&&!isStandalone?"ios":"unsupported";return}
+  if(Notification.permission=="denied"){push.state="denied";return}
+  const s=await reg.pushManager.getSubscription();push.state=s?"on":"off";
+  if(s&&session)await savePushSub(s);
+}
+async function savePushSub(s){const j=s.toJSON();await sb.from("push_subscriptions").upsert({user_id:session.user.id,endpoint:j.endpoint,p256dh:j.keys.p256dh,auth:j.keys.auth,user_agent:navigator.userAgent.slice(0,300)},{onConflict:"endpoint"})}
+async function enablePush(){
+  push.msg="";const b=$("#pushgo");if(b)b.disabled=true;
+  try{
+    const perm=await Notification.requestPermission();
+    if(perm!="granted"){push.state=perm=="denied"?"denied":"off";push.msg="Njoftimet nuk u lejuan.";return draw()}
+    const reg=await swReg();await navigator.serviceWorker.ready;
+    let s=await reg.pushManager.getSubscription();if(!s){const k=await sb.rpc("get_vapid_public");if(k.error||!k.data)throw new Error("çelësi i njoftimeve mungon");s=await reg.pushManager.subscribe({userVisibleOnly:true,applicationServerKey:b64u(k.data)})}
+    const {error}=await sb.from("push_subscriptions").upsert({user_id:session.user.id,endpoint:s.endpoint,p256dh:s.toJSON().keys.p256dh,auth:s.toJSON().keys.auth,user_agent:navigator.userAgent.slice(0,300)},{onConflict:"endpoint"});
+    if(error)throw error;
+    push.state="on";push.msg="Njoftimet u aktivizuan në këtë pajisje.";
+  }catch(e){push.msg="Aktivizimi dështoi: "+(e.message||e)}
+  draw();
+}
+async function disablePush(){
+  const reg=await swReg(),s=reg&&await reg.pushManager.getSubscription();
+  if(s){await sb.from("push_subscriptions").delete().eq("endpoint",s.endpoint);await s.unsubscribe()}
+  push.state="off";push.msg="Njoftimet u çaktivizuan në këtë pajisje.";draw();
+}
+async function testPush(){const {error}=await sb.from("notifications").insert({user_id:session.user.id,title:"Provë nga Digital HR",body:"Njoftimet në telefon funksionojnë."});push.msg=error?"Nuk u dërgua: "+error.message:"U dërgua një njoftim provë. Duhet t'ju dalë në telefon brenda pak sekondash.";draw()}
+function pushCard(){
+  const s=push.state;if(s=="?")return "";
+  if(s=="on")return '<div class="pushok">🔔 Njoftimet në telefon janë aktive në këtë pajisje.'+(me.role=="admin"?' <button class="lnk2" onclick="testPush()">Dërgo provë</button>':'')+' <button class="lnk2" onclick="disablePush()">Çaktivizo</button>'+(push.msg?'<div class="mut" style="font-size:12px;margin-top:4px">'+esc(push.msg)+'</div>':'')+'</div>';
+  let h='<div class="card pushc"><h2>🔔 Njoftimet në telefon</h2>';
+  if(s=="off")h+='<p>Merrni njoftim në telefon sa herë që miratohet pushimi, konfirmohet paga ose ka diçka të re për ju, edhe pa e hapur aplikacionin.</p><button class="btn p" id="pushgo" onclick="enablePush()">Aktivizo njoftimet</button>';
+  else if(s=="ios")h+='<p>Në iPhone njoftimet punojnë kur aplikacioni shtohet në ekranin kryesor:</p><ol class="pst"><li>Hapni digitalhr.vercel.app në <b>Safari</b>.</li><li>Klikoni butonin <b>Share</b> (katrori me shigjetë) → <b>Add to Home Screen</b>.</li><li>Hapeni aplikacionin nga ikona "Digital HR" dhe klikoni <b>Aktivizo njoftimet</b>.</li></ol><p class="mut" style="font-size:12px">Kërkohet iOS 16.4 ose më i ri.</p>';
+  else if(s=="denied")h+='<p>Njoftimet janë bllokuar për këtë faqe. Lejojini te cilësimet e shfletuesit (ikona e drynit pranë adresës → Njoftimet → Lejo), pastaj rifreskoni faqen.</p>';
+  else h+='<p>Ky shfletues nuk i mbështet njoftimet. Përdorni Chrome në Android ose shtoni aplikacionin në ekranin kryesor në iPhone.</p>';
+  if(push.msg)h+='<p class="err">'+esc(push.msg)+'</p>';
+  return h+'</div>';
 }
 function csv(){
   const qq=v=>'"'+String(v==null?"":v).replace(/"/g,'""')+'"';
