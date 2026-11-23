@@ -95,6 +95,8 @@ main.wrap{position:relative;margin-top:-64px;padding-bottom:20px;display:flex;fl
 .ovrow{display:flex;gap:12px;align-items:center;justify-content:space-between;flex-wrap:wrap;padding:9px 0;border-bottom:1px solid var(--bd);font-size:13px}
 .ovrow>span:first-of-type{flex:1}.ovrow.tot{border-bottom:0;font-size:15px}
 tr.arm td{background:#FFF8F7}
+.ebar .chk{display:inline-flex;gap:6px;align-items:center;margin:0;white-space:nowrap}.ebar .chk input{width:18px!important;height:18px!important;min-width:0!important;padding:0!important;margin:0!important;flex:none}
+.xch{display:block;font-size:9.5px;font-weight:800;line-height:1.15;color:#5B2BB5}.xch.st{color:var(--mut);font-weight:600}
 .pushc{border:2px dashed var(--blue)}.pushc p{margin:0 0 12px;font-size:14px;line-height:1.5}.pst{margin:0 0 10px;padding-left:20px;font-size:14px;line-height:1.7}.pushok{font-size:13px;color:var(--mut);margin:-4px 0 14px;padding:0 4px}.lnk2{background:none;border:0;color:var(--blue);font:600 13px Montserrat,sans-serif;cursor:pointer;padding:0 4px;text-decoration:underline}
 .chkf{margin-top:6px}.chki{padding:10px 0;border-bottom:1px solid var(--bd)}.chki.todo .chkt{color:var(--tx)}.chkt{font-weight:600;font-size:14px;margin-bottom:8px}
 .seg{display:flex;gap:6px;flex-wrap:wrap}.seg button{flex:1;min-width:92px;height:40px;border-radius:999px;border:1.5px solid var(--bd);background:#fff;font:600 13px Montserrat,sans-serif;color:var(--mut);cursor:pointer}
@@ -422,15 +424,19 @@ function schedGrid(admin){
   if(!depts.length)return '<div class="card"><p class="mut">'+(admin?"Nuk ka orar për "+mLabel(smonth)+". Ngarkoni Excel-in e muajit.":"Nuk ka orar për "+mLabel(smonth)+".")+'</p></div>';
   const head='<tr><th class="nm"></th>'+days.map(x=>'<th class="'+(x==t?"today":"")+'">'+(+x.slice(8))+'<small>'+wd(x)+'</small></th>').join("")+'</tr>';
   return depts.map(dp=>{
-    const ids=[...new Set(es.filter(e=>e.dept==dp&&!e.is_extra).map(e=>e.person_id))].sort((a,b)=>pName(a).localeCompare(pName(b)));
-    const cell=(pid,x)=>{const e=es.find(z=>z.dept==dp&&!z.is_extra&&z.person_id==pid&&z.day==x),v=e?e.value:"",on=sedit&&sedit.dept==dp&&sedit.pid==pid&&sedit.day==x;
-      return '<td>'+(admin?'<button type="button" class="sc '+sCls(v)+(on?" on":"")+'" title="'+esc(pName(pid)+" · "+fmt(x))+'" onclick="sOpen(\''+esc(dp)+'\',\''+pid+'\',\''+x+'\')">'+(v?esc(sTxt(v)):"·")+'</button>':'<span class="sc '+sCls(v)+'" title="'+esc(v)+'">'+(v?esc(sTxt(v)):"·")+'</span>')+'</td>'};
-    let rows=ids.map(pid=>'<tr'+(pid==myP?' class="mine"':'')+'><td class="nm">'+esc(pName(pid))+(pid==myP?' <span class="badge t">Ju</span>':'')+'</td>'+days.map(x=>cell(pid,x)).join("")+'</tr>').join("");
-    const ex=es.filter(e=>e.dept==dp&&e.is_extra);
+    // rows: people with shifts here, people with extra days here, and people marked as extra staff of this section
+    const reg=new Set(es.filter(e=>e.dept==dp&&!e.is_extra&&e.person_id).map(e=>e.person_id));
+    const ids=[...new Set([...reg,...es.filter(e=>e.dept==dp&&e.is_extra&&e.person_id).map(e=>e.person_id),...sched.people.filter(p=>(p.extra_depts||[]).includes(dp)).map(p=>p.id)])].sort((a,b)=>(reg.has(b)-reg.has(a))||pName(a).localeCompare(pName(b)));
+    const cell=(pid,x)=>{const e=es.find(z=>z.dept==dp&&!z.is_extra&&z.person_id==pid&&z.day==x),xe=es.filter(z=>z.dept==dp&&z.is_extra&&z.person_id==pid&&z.day==x),v=e?e.value:"",on=sedit&&sedit.dept==dp&&sedit.pid==pid&&sedit.day==x;
+      const xs=xe.map(z=>'<span class="xch'+(z.value.includes("*")?' st':'')+'">+'+esc(z.value)+'</span>').join("");
+      const inner=(v?esc(sTxt(v)):xe.length?'':"·")+xs;
+      return '<td>'+(admin?'<button type="button" class="sc '+(v?sCls(v):xe.length?'sx':'')+(on?" on":"")+'" title="'+esc(pName(pid)+" · "+fmt(x)+(xe.length?" · extra "+xe.map(z=>z.value).join(", "):""))+'" onclick="sOpen(\''+esc(dp)+'\',\''+pid+'\',\''+x+'\')">'+inner+'</button>':'<span class="sc '+(v?sCls(v):xe.length?'sx':'')+'" title="'+esc(v+(xe.length?" extra "+xe.map(z=>z.value).join(", "):""))+'">'+inner+'</span>')+'</td>'};
+    let rows=ids.map(pid=>'<tr'+(pid==myP?' class="mine"':'')+'><td class="nm">'+esc(pName(pid))+(pid==myP?' <span class="badge t">Ju</span>':'')+(reg.has(pid)?'':' <span class="badge w">extra</span>')+'</td>'+days.map(x=>cell(pid,x)).join("")+'</tr>').join("");
+    const ex=es.filter(e=>e.dept==dp&&e.is_extra&&!e.person_id);
     if(ex.length)rows+='<tr><td class="nm mut">Extra</td>'+days.map(x=>'<td>'+ex.filter(e=>e.day==x).map(e=>'<span class="chip '+sCls(e.value)+(myP&&e.person_id==myP?' minec':'')+'">'+esc((e.person_id?pName(e.person_id).split(" ")[0]:e.person_label)+" "+e.value)+'</span>').join("<br>")+'</td>').join("")+'</tr>';
     let eb="";
-    if(admin&&sedit&&sedit.dept==dp)eb='<div class="ebar"><b>'+esc(pName(sedit.pid))+'</b><span class="mut">'+wd(sedit.day)+" "+fmt(sedit.day)+'</span><label class="sr" for="sv">Ndërrimi</label><input id="sv" list="shl" value="'+esc(sedit.value)+'" placeholder="p.sh. 08-16" onkeydown="if(event.key==\'Enter\')sSave()"><datalist id="shl">'+["07-15","08-16","09-17","10-18","15-23","16-00","23-07","Pushim","PUSHIM VJETOR"].map(o=>'<option value="'+o+'">').join("")+'</datalist><button class="btn p sm" onclick="sSave()">Ruaj</button>'+(sedit.id?'<button class="btn sm" onclick="sSave(1)">Fshi</button>':'')+'<button class="btn sm" onclick="sedit=null;draw()">Anulo</button><span class="err" id="serr" style="margin:0"></span></div>';
-    return '<div class="card"><h2>'+esc(dp)+'</h2>'+eb+'<div class="sg"><table class="sgt">'+head+rows+'</table></div></div>';
+    if(admin&&sedit&&sedit.dept==dp)eb='<div class="ebar">'+(sedit.pick?'<label class="sr" for="sp">Punonjësi</label><select id="sp" style="width:auto;margin:0" onchange="sedit.pid=this.value"><option value="">Zgjidhni punonjësin</option>'+sched.people.slice().sort((a,b)=>a.name.localeCompare(b.name)).map(p=>'<option value="'+p.id+'"'+(sedit.pid==p.id?' selected':'')+'>'+esc(p.name)+'</option>').join("")+'</select><label class="sr" for="sd">Data</label><input type="date" id="sd" value="'+sedit.day+'" style="width:auto;margin:0" oninput="sedit.day=this.value">':'<b>'+esc(pName(sedit.pid))+'</b><span class="mut">'+wd(sedit.day)+" "+fmt(sedit.day)+'</span>')+'<label class="chk" style="font-size:13px"><input type="checkbox" id="sx"'+(sedit.extra?' checked':'')+(sedit.pick?' disabled':'')+' onchange="sedit.extra=this.checked"> Ditë extra</label><label class="sr" for="sv">Ndërrimi</label><input id="sv" list="shl" value="'+esc(sedit.value)+'" placeholder="p.sh. 08-16" onkeydown="if(event.key==\'Enter\')sSave()"><datalist id="shl">'+["07-15","08-16","09-17","10-18","15-23","16-00","23-07","Pushim","PUSHIM VJETOR"].map(o=>'<option value="'+o+'">').join("")+'</datalist><button class="btn p sm" onclick="sSave()">Ruaj</button>'+(sedit.id?'<button class="btn sm" onclick="sSave(1)">Fshi</button>':'')+'<button class="btn sm" onclick="sedit=null;draw()">Anulo</button><span class="err" id="serr" style="margin:0"></span></div>';
+    return '<div class="card"><div class="hd"><h2 style="margin:0">'+esc(dp)+'</h2>'+(admin?'<button class="btn ol sm" onclick="sAddExtra(\''+esc(dp)+'\')">+ Ditë extra</button>':'')+'</div>'+eb+'<div class="sg"><table class="sgt">'+head+rows+'</table></div></div>';
   }).join("")+'<div class="legend"><span class="sm">Paradite</span><span class="sa">Pasdite</span><span class="sn">Natë</span><span class="so">Pushim</span><span class="sl">Pushim vjetor</span></div>';
 }
 function schedView(admin){
@@ -452,12 +458,20 @@ function mySchedCard(){
   if(showSec)h=h.replace('<div class="days7">','<div class="days7">')+'<div class="mnav" style="justify-content:center"><button class="btn sm" aria-label="Muaji paraprak" onclick="shiftMonth(-1)">‹</button><b>'+mLabel(smonth)+'</b><button class="btn sm" aria-label="Muaji tjetër" onclick="shiftMonth(1)">›</button></div>'+schedGrid(false);
   return h;
 }
-function sOpen(dp,pid,x){const e=sched.entries.find(z=>z.dept==dp&&!z.is_extra&&z.person_id==pid&&z.day==x);sedit={dept:dp,pid:pid,day:x,id:e?e.id:null,value:e?e.value:""};draw();const i=$("#sv");if(i){i.focus();i.select()}}
+function sOpen(dp,pid,x){
+  const e=sched.entries.find(z=>z.dept==dp&&!z.is_extra&&z.person_id==pid&&z.day==x),xe=sched.entries.find(z=>z.dept==dp&&z.is_extra&&z.person_id==pid&&z.day==x&&!z.absence_id);
+  const home=sched.entries.some(z=>z.dept==dp&&!z.is_extra&&z.person_id==pid&&z.day.slice(0,7)==smonth),t=e||(xe&&!e?xe:null);
+  sedit={dept:dp,pid:pid,day:x,id:t?t.id:null,value:t?t.value:"",extra:t?t.is_extra:!home};draw();const i=$("#sv");if(i){i.focus();i.select()}
+}
+function sAddExtra(dp){const t=today(),d=t.slice(0,7)==smonth?t:smonth+"-01";sedit={dept:dp,pid:"",day:d,id:null,value:"",extra:true,pick:true};draw()}
 async function sSave(del){
-  const v=del?"":$("#sv").value.trim(),er=$("#serr");let r;
+  const v=del?"":$("#sv").value.trim(),er=$("#serr"),x=!!sedit.extra;let r;
+  if(sedit.pick&&(!sedit.pid||!sedit.day)){er.textContent="Zgjidhni punonjësin dhe datën.";return}
+  if(x&&v&&!/^\s*\d{1,2}(:\d{2})?\s*-\s*\d{1,2}/.test(v)){er.textContent="Për ditë extra shkruani ndërrimin, p.sh. 07-15.";return}
+  const lbl=(pName(sedit.pid)||"").split(" ")[0];
   if(sedit.id&&!v)r=await sb.from("schedule_entries").delete().eq("id",sedit.id);
-  else if(sedit.id)r=await sb.from("schedule_entries").update({value:v}).eq("id",sedit.id);
-  else if(v)r=await sb.from("schedule_entries").insert({day:sedit.day,dept:sedit.dept,person_id:sedit.pid,value:v});
+  else if(sedit.id)r=await sb.from("schedule_entries").update({value:v,is_extra:x,person_label:x?lbl:null}).eq("id",sedit.id);
+  else if(v)r=await sb.from("schedule_entries").insert({day:sedit.day,dept:sedit.dept,person_id:sedit.pid,value:v,is_extra:x,person_label:x?lbl:null});
   else{sedit=null;return draw()}
   if(r&&r.error){er.textContent=r.error.message;return}
   sedit=null;await loadSched();draw();
