@@ -292,7 +292,7 @@ async function load(){
 }
 
 function shell(inner){
-  const adm=me.role=="admin",pend=profs.filter(x=>x.status=="pending").length+allAbs.filter(a=>st(a)=="pending").length;
+  const adm=me.role=="admin",pend=profs.filter(x=>x.status=="pending").length+(allAbs.filter(a=>st(a)=="pending").length+allAbs.filter(a=>a.req_at).length);
   let h='<header class="nhead">'+CIRC(2)+'<div class="wrap"><div class="hrow">'+logoBlock(36)+'<button class="icon-btn" onclick="out()" aria-label="Dil" title="Dil">'+I.out+'</button></div>';
   h+='<div class="who"><p>Mirë se vini,</p><h1>'+esc(me.full_name)+'</h1><p>'+esc(me.position)+' · Kuleta digjitale personale</p></div>';
   if(adm)h+='<nav class="tabs" aria-label="Seksionet"><button class="'+(tab=="ov"?"on":"")+'" onclick="go(\'ov\')">Pasqyra</button><button class="'+(tab=="req"?"on":"")+'" onclick="go(\'req\')">Kërkesat'+(pend?' <span class="cnt">'+pend+'</span>':'')+'</button><button class="'+(tab=="staff"?"on":"")+'" onclick="go(\'staff\')">Stafi</button><button class="'+(tab=="sched"?"on":"")+'" onclick="go(\'sched\')">Orari</button><button class="'+(tab=="pay"?"on":"")+'" onclick="go(\'pay\')">Pagat</button><button class="'+(tab=="chk"?"on":"")+'" onclick="go(\'chk\')">Kontrollat'+(chkPend()?' <span class="badge t">'+chkPend()+'</span>':'')+'</button><button class="'+(tab=="me"?"on":"")+'" onclick="go(\'me\')">Pushimet e mia</button></nav>';
@@ -378,8 +378,26 @@ const out=()=>sb.auth.signOut();
 function entry(e,del){
   const med=e.leave_type=="mjekesor";
   const badge=STB[st(e)]+(med?(e.doc_path?'<span class="badge t">Me dëshmi</span>':'<span class="badge t">Pa dëshmi (≤3)</span>'):'');
-  return '<div class="ent"><div class="ico">'+icoFor(e.leave_type)+'</div><div class="txt"><b>'+esc(T[e.leave_type][0])+(e.shift?' · '+esc(e.shift):'')+'</b><div>'+fmt(e.from_date)+' – '+fmt(e.to_date)+' · '+e.days+' ditë</div>'+(e.note?'<div>'+esc(e.note)+'</div>':'')+(e.edited_at?'<div>Ndryshuar nga administratori</div>':'')+(e.admin_comment?'<div class="cmt"><b>Koment nga administratori:</b> '+esc(e.admin_comment)+'</div>':'')+'</div><div class="act">'+badge+(e.doc_path?'<button type="button" class="lnk" style="border:0;background:none;padding:0;font-size:13px" onclick="openDoc(\''+esc(e.doc_path)+'\')">Dëshmia</button>':'')+(del?'<button class="btn sm" onclick="editLeave(\''+e.id+'\')">Ndrysho</button><button class="btn sm'+(armed==e.id?' danger':'')+'" onclick="del(\''+e.id+'\')">'+(armed==e.id?"Konfirmo?":"Fshi")+'</button>':'')+'</div>'+(del&&editing==e.id?editForm(e):'')+'</div>';
+  return '<div class="ent"><div class="ico">'+icoFor(e.leave_type)+'</div><div class="txt"><b>'+esc(T[e.leave_type][0])+(e.shift?' · '+esc(e.shift):'')+'</b><div>'+fmt(e.from_date)+' – '+fmt(e.to_date)+' · '+e.days+' ditë</div>'+(e.note?'<div>'+esc(e.note)+'</div>':'')+(e.edited_at?'<div>Ndryshuar nga administratori</div>':'')+(e.admin_comment?'<div class="cmt"><b>Koment nga administratori:</b> '+esc(e.admin_comment)+'</div>':'')+'</div><div class="act">'+badge+(e.doc_path?'<button type="button" class="lnk" style="border:0;background:none;padding:0;font-size:13px" onclick="openDoc(\''+esc(e.doc_path)+'\')">Dëshmia</button>':'')+(!del&&e.leave_type=="extra"&&!e.req_at&&!(xEd&&xEd.id==e.id)?'<button class="btn sm ol" onclick="xOpen(\''+e.id+'\')">Korrigjo</button>':'')+(del?'<button class="btn sm" onclick="editLeave(\''+e.id+'\')">Ndrysho</button><button class="btn sm'+(armed==e.id?' danger':'')+'" onclick="del(\''+e.id+'\')">'+(armed==e.id?"Konfirmo?":"Fshi")+'</button>':'')+'</div>'+(e.req_at?'<div class="edit"><div class="cmt" style="background:#FFF6E5;color:#5C3800"><b>Korrigjim në pritje të miratimit:</b> '+xPer(e.req_from,e.req_to)+' · '+esc(e.req_shift||"")+(e.req_note?' · “'+esc(e.req_note)+'”':'')+'</div>'+(!del?'<div class="acts"><button class="btn sm" onclick="xCancel(\''+e.id+'\')">Anulo korrigjimin</button></div>':'')+'</div>':'')+(!del&&xEd&&xEd.id==e.id?xForm(e):'')+(del&&editing==e.id?editForm(e):'')+'</div>';
 }
+// Staff correction of their own "Punë extra": pending/rejected are edited directly, approved ones need the admin's approval.
+let xEd=null;
+const xPer=(f,t)=>f==t?fmt(f):fmt(f)+" – "+fmt(t);
+function xOpen(id){const e=myAbs.find(z=>z.id==id);xEd={id:id,err:""};openS.hist=true;draw();const f=$("#xf");if(f)f.scrollIntoView({block:"center",behavior:"smooth"})}
+function xForm(e){
+  const ap=st(e)=="approved";
+  return '<div class="edit"><div class="row r3"><div><label for="xf">Prej</label><input type="date" id="xf" value="'+e.from_date+'"></div><div><label for="xt">Deri</label><input type="date" id="xt" value="'+e.to_date+'"></div><div><label for="xs">Orari</label><input id="xs" list="shl3" value="'+esc(e.shift||"")+'" placeholder="p.sh. 08-16"><datalist id="shl3">'+["07-15","08-16","09-17","10-18","15-23","16-00","23-07"].map(o=>'<option value="'+o+'">').join("")+'</datalist></div></div><label for="xn">Arsyeja e korrigjimit (opsionale)</label><input id="xn" maxlength="500" placeholder="p.sh. Kam punuar 15-23, jo 07-15"><p class="mut" style="font-size:12px;margin:8px 0 0">'+(ap?'Kjo ditë extra është e miratuar. Korrigjimi i dërgohet administratorit dhe orari ndryshon vetëm pasi ta miratojë.':'Kërkesa e korrigjuar i dërgohet përsëri administratorit për miratim.')+'</p><p class="err" id="xerr">'+esc(xEd.err||"")+'</p><div class="acts"><button class="btn p sm" id="xgo" onclick="xSave(\''+e.id+'\')">Dërgo për miratim</button><button class="btn sm" onclick="xEd=null;draw()">Anulo</button></div></div>';
+}
+async function xSave(id){
+  const f=$("#xf").value,t=$("#xt").value,s=$("#xs").value.trim(),n=$("#xn").value.trim(),er=$("#xerr");er.textContent="";
+  if(!f||!t||t<f){er.textContent="Zgjidhni datat e sakta.";return}
+  if(!/^\d{1,2}(:\d{2})?\s*-\s*\d{1,2}(:\d{2})?$/.test(s)){er.textContent="Shkruani orarin e punës extra, p.sh. 08-16.";return}
+  $("#xgo").disabled=true;
+  const {data,error}=await sb.rpc("request_extra_change",{p_id:id,p_from:f,p_to:t,p_shift:s,p_note:n||null});
+  if(error){$("#xgo").disabled=false;er.textContent=error.message;return}
+  xEd=null;flash=data=="requested"?"Korrigjimi u dërgua. Orari ndryshon pasi ta miratojë administratori.":"Kërkesa u korrigjua dhe pret miratimin e administratorit.";await load();
+}
+async function xCancel(id){const {error}=await sb.rpc("cancel_extra_change",{p_id:id});if(error){alert(error.message);return}flash="Korrigjimi u anulua.";await load()}
 function menuHtml(){
   let h='<label id="lt">Lloji i pushimit</label><button type="button" aria-labelledby="lt" aria-expanded="'+menu+'" class="sel'+(ltype?"":" ph")+'" onclick="menu=!menu;sub=null;draw()"><span>'+(ltype?esc(T[ltype][0]):"Zgjidhni llojin e pushimit")+'</span>'+I.down+'</button>';
   if(menu)h+='<div class="menu">'+MENU.map((m,n)=>m.k?'<button type="button" class="mi" onclick="pick(\''+m.k+'\')"><span>'+esc(T[m.k][0])+'</span>'+(T[m.k][1]?'<span class="mut">'+T[m.k][1]+' ditë</span>':'')+'</button>':'<button type="button" class="mi" onclick="sub=sub===\''+n+'\'?null:\''+n+'\';draw()"><span>'+esc(m.l)+'</span><span>'+(sub===String(n)?"▾":"▸")+'</span></button>'+(sub===String(n)?m.i.map(k=>'<button type="button" class="mi si" onclick="pick(\''+k+'\')"><span>'+esc(T[k][0])+'</span>'+(T[k][1]?'<span class="mut">'+T[k][1]+' ditë</span>':'')+'</button>').join(""):"")).join("")+'</div>';
@@ -625,13 +643,15 @@ function reqView(){
   const nm=id=>profs.find(x=>x.id==id)||{};
   let h='<div class="card"><div class="hd"><h2>Kërkesa për pushim</h2>'+(la.length?'<span class="badge t">'+la.length+' në pritje</span>':'')+'</div>';
   h+=la.length?la.map(e=>{const s=nm(e.user_id),med=e.leave_type=="mjekesor";return '<div class="req"><div style="display:flex;gap:12px;align-items:center;min-width:0"><span class="av">'+esc(ini(s.full_name))+'</span><div style="min-width:0"><b>'+esc(s.full_name||"—")+'</b> <span class="mut" style="font-size:13px">· '+esc(s.position||"")+'</span><div style="font-size:14px">'+esc(T[e.leave_type][0])+(e.shift?' · <b>'+esc(e.shift)+'</b>':'')+'</div><div class="mut" style="font-size:13px">'+fmt(e.from_date)+' – '+fmt(e.to_date)+' · <b style="color:var(--tx)">'+e.days+' ditë</b>'+(T[e.leave_type][1]?' · të miratuara këtë vit: '+used(allAbs.filter(a=>a.user_id==e.user_id),e.leave_type,e.user_id)+'/'+T[e.leave_type][1]:'')+'</div>'+(e.note?'<div class="mut" style="font-size:13px">“'+esc(e.note)+'”</div>':'')+(e.doc_path?(true?'<button type="button" class="lnk" style="border:0;background:none;padding:0;font-size:13px" onclick="openDoc(\''+esc(e.doc_path)+'\')">Shiko dëshminë</button>':''):'')+'</div></div><div style="display:flex;gap:8px"><button class="btn p" onclick="setLeave(\''+e.id+'\',\'approved\')">Mirato</button><button class="btn" onclick="setLeave(\''+e.id+'\',\'rejected\')">Refuzo</button><button class="btn ol" onclick="editLeave(\''+e.id+'\')">Ndrysho / Koment</button></div>'+(editing==e.id?editForm(e):'')+'</div>'}).join(""):'<p class="mut">Asnjë kërkesë për pushim në pritje.</p>';
+  const xr=allAbs.filter(a=>a.req_at);
+  if(xr.length)h+='</div><div class="card"><div class="hd"><h2>Korrigjime të orarit</h2><span class="badge t">'+xr.length+' në pritje</span></div><p class="mut" style="font-size:13px;margin:-4px 0 6px">Punëtori kërkon të korrigjojë një ditë extra të miratuar. Orari ndryshon vetëm pas miratimit tuaj; punëtori njoftohet për vendimin.</p>'+xr.map(e=>{const s=nm(e.user_id);return '<div class="req"><div style="display:flex;gap:12px;align-items:center;min-width:0"><span class="av">'+esc(ini(s.full_name))+'</span><div style="min-width:0"><b>'+esc(s.full_name||"—")+'</b> <span class="mut" style="font-size:13px">· Punë extra</span><div style="font-size:14px">Nga: <s class="mut">'+xPer(e.from_date,e.to_date)+' · '+esc(e.shift||"")+'</s></div><div style="font-size:14px">Në: <b>'+xPer(e.req_from,e.req_to)+' · '+esc(e.req_shift||"")+'</b></div>'+(e.req_note?'<div class="mut" style="font-size:13px">“'+esc(e.req_note)+'”</div>':'')+'<input id="xc_'+e.id+'" maxlength="1000" placeholder="Koment për punëtorin (opsional)" style="margin-top:8px;height:40px"></div></div><div style="display:flex;gap:8px"><button class="btn p" onclick="xDecide(\''+e.id+'\',1)">Mirato korrigjimin</button><button class="btn" onclick="xDecide(\''+e.id+'\',0)">Refuzo</button></div></div>'}).join("");
   h+='</div><div class="card"><div class="hd"><h2>Kërkesa për llogari</h2>'+(p.length?'<span class="badge t">'+p.length+' në pritje</span>':'')+'</div>';
   h+=p.length?p.map(x=>'<div class="req"><div style="display:flex;gap:12px;align-items:center"><span class="av">'+esc(ini(x.full_name))+'</span><div><b>'+esc(x.full_name)+'</b><div class="mut" style="font-size:13px">'+esc(x.position)+' · '+new Date(x.created_at).toLocaleDateString("sq")+'</div></div></div><div style="display:flex;gap:8px"><button class="btn p" onclick="setStatus(\''+x.id+'\',\'approved\')">Mirato</button><button class="btn" onclick="setStatus(\''+x.id+'\',\'rejected\')">Refuzo</button></div></div>').join(""):'<p class="mut">Asnjë kërkesë për llogari në pritje.</p>';
   return h+'</div>';
 }
 function staffView(){
   const ap=profs.filter(x=>x.status=="approved");
-  const pend=profs.filter(x=>x.status=="pending").length+allAbs.filter(a=>st(a)=="pending").length,td=today(),mo=td.slice(0,7);
+  const pend=profs.filter(x=>x.status=="pending").length+(allAbs.filter(a=>st(a)=="pending").length+allAbs.filter(a=>a.req_at).length),td=today(),mo=td.slice(0,7);
   const away=new Set(allAbs.filter(a=>st(a)=="approved"&&a.leave_type!="extra"&&a.from_date<=td&&a.to_date>=td).map(a=>a.user_id)).size;
   const medMo=allAbs.filter(a=>st(a)=="approved"&&a.leave_type=="mjekesor"&&a.from_date.slice(0,7)==mo).reduce((s,a)=>s+a.days,0);
   let h='<div class="stats"><div class="mini"><small>Punonjës aktivë</small><b>'+ap.length+'</b></div><div class="mini"><small>Në pushim sot</small><b>'+away+'</b></div><div class="mini"><small>Ditë mjekësore këtë muaj</small><b>'+medMo+'</b></div><button type="button" class="mini hot" onclick="go(\'req\')"><small>Kërkesa në pritje</small><b>'+pend+'</b></button></div>';
@@ -723,6 +743,15 @@ async function saveLeave(id,s){
   const r=await sb.from("absences").update(pl).eq("id",id);
   if(r.error){document.querySelectorAll(".edit button").forEach(b=>b.disabled=false);er.textContent=/doc_required/.test(r.error.message)?"Pushimi mjekësor mbi 3 ditë kërkon dëshmi të mjekut, të cilën punonjësi nuk e ka ngarkuar.":/Kaluat/.test(r.error.message)?r.error.message:"Ruajtja dështoi: "+r.error.message;return}
   editing=null;load();
+}
+async function xDecide(id,ok){
+  const e=allAbs.find(z=>z.id==id),c=($("#xc_"+id)&&$("#xc_"+id).value.trim())||null;if(!e)return;
+  const pl={req_from:null,req_to:null,req_shift:null,req_note:null,req_at:null};
+  if(c)pl.admin_comment=c;
+  if(ok)Object.assign(pl,{from_date:e.req_from,to_date:e.req_to,days:span(e.req_from,e.req_to),shift:e.req_shift});
+  const r=await sb.from("absences").update(pl).eq("id",id);
+  if(r.error)alert("Veprimi dështoi: "+r.error.message);
+  load();
 }
 async function setStatus(id,s){await sb.from("profiles").update({status:s}).eq("id",id);load()}
 async function setLeave(id,s){const r=await sb.from("absences").update({status:s}).eq("id",id);if(r.error)alert("Veprimi dështoi: "+r.error.message);load()}
@@ -879,7 +908,7 @@ function ovView(){
   const P=sched.people.slice().sort((a,b)=>(a.position||"~").localeCompare(b.position||"~")||a.name.localeCompare(b.name)),D=P.map(p=>({p,x:ovPerson(p)}));
   const t=today(),tE=sched.entries.filter(e=>e.day==t),days=mDays(ovm),mh=ov.hols.filter(x=>x.day.slice(0,7)==ovm);
   const workT=P.filter(p=>tE.some(e=>e.person_id==p.id&&isShift(e.value))).length,offT=P.filter(p=>tE.some(e=>e.person_id==p.id&&sCls(e.value)=="sl")||absOn(p.user_id,t).length).length;
-  const pend=profs.filter(x=>x.status=="pending").length+allAbs.filter(a=>st(a)=="pending").length,payT=ov.pay.reduce((s,r)=>s+(+r.total||0),0),exT=D.reduce((s,r)=>s+r.x.extra,0),linked=P.filter(p=>p.user_id).length;
+  const pend=profs.filter(x=>x.status=="pending").length+(allAbs.filter(a=>st(a)=="pending").length+allAbs.filter(a=>a.req_at).length),payT=ov.pay.reduce((s,r)=>s+(+r.total||0),0),exT=D.reduce((s,r)=>s+r.x.extra,0),linked=P.filter(p=>p.user_id).length;
   const tile=(lbl,val,sub,click)=>'<'+(click?'button class="mini hot" onclick="'+click+'"':'div class="mini"')+'><small>'+lbl+'</small><b>'+val+'</b>'+(sub?'<div class="mut" style="font-size:12px;margin-top:2px'+(click?';color:#DCE4FF':'')+'">'+sub+'</div>':'')+'</'+(click?'button':'div')+'>';
   h+='<div class="ovk">'+tile("Stafi",P.length,linked+" të lidhur me llogari")+tile("Në punë sot",workT,offT+" në pushim sot")+tile("Kërkesa në pritje",pend,pend?"Hapni Kërkesat":"Asgjë për miratim",pend?"go('req')":"")+tile("Ditë extra",exT,mLabel(ovm))+tile("Festa zyrtare",mh.length,mh.length?esc(mh.map(x=>x.day.slice(8)+"."+x.day.slice(5,7)).join(", ")):"Asnjë këtë muaj")+tile("Pagat e muajit",eur(payT),"Hapni Pagat","go('pay')")+'</div>';
   if(!P.length)return h+'<div class="card"><p class="mut">Nuk ka staf në listë. Ngarkoni orarin te Orari.</p></div>';
