@@ -96,8 +96,7 @@ begin
   end if;
   return null;
 end $$;
-drop trigger if exists absences_delete_notify on public.absences;
-create trigger absences_delete_notify after delete on public.absences for each row execute function public.trg_absence_delete_notify();
+create or replace trigger absences_delete_notify after delete on public.absences for each row execute function public.trg_absence_delete_notify();
 
 -- Pay adjustments (bonus / deduction)
 create or replace function public.trg_adjust_notify()
@@ -115,8 +114,7 @@ begin
     E'\nPaga përfundimtare ju dërgohet kur administratori konfirmon listën e pagave.');
   return null;
 end $$;
-drop trigger if exists payroll_adjust_notify on public.payroll_adjust;
-create trigger payroll_adjust_notify after insert or delete on public.payroll_adjust for each row execute function public.trg_adjust_notify();
+create or replace trigger payroll_adjust_notify after insert or delete on public.payroll_adjust for each row execute function public.trg_adjust_notify();
 
 -- Base salary changed
 create or replace function public.trg_base_notify()
@@ -130,8 +128,7 @@ begin
   perform public.notify_person(new.person_id, 'Paga bazë u përditësua', 'Administratori përditësoi pagën tuaj bazë: ' || fm || '.');
   return null;
 end $$;
-drop trigger if exists payroll_base_notify on public.payroll_base;
-create trigger payroll_base_notify after insert or update on public.payroll_base for each row execute function public.trg_base_notify();
+create or replace trigger payroll_base_notify after insert or update on public.payroll_base for each row execute function public.trg_base_notify();
 
 -- Account linked to a name in the schedule
 create or replace function public.trg_link_notify()
@@ -143,5 +140,4 @@ begin
   end if;
   return null;
 end $$;
-drop trigger if exists people_link_notify on public.schedule_people;
-create trigger people_link_notify after update of user_id on public.schedule_people for each row execute function public.trg_link_notify();
+create or replace trigger people_link_notify after update of user_id on public.schedule_people for each row execute function public.trg_link_notify();

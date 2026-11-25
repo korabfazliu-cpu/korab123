@@ -234,8 +234,11 @@ const span=(a,b)=>Math.round((new Date(b)-new Date(a))/864e5)+1;
 const st=e=>e.status||"approved";
 const sumY=(es,k,f)=>(es||[]).filter(e=>e.from_date.slice(0,4)==Y&&e.leave_type==k&&f(st(e))).reduce((s,e)=>s+e.days,0);
 const opn=(uid,k)=>{if(!uid)return 0;const p=sched.people.find(x=>x.user_id==uid);return p?opening.filter(o=>o.person_id==p.id&&o.leave_type==k&&o.year==Y).reduce((s,o)=>s+o.used_days,0):0};
-const used=(es,k,uid)=>sumY(es,k,s=>s=="approved")+opn(uid,k);
-const held=(es,k,uid)=>sumY(es,k,s=>s!="rejected")+opn(uid,k);
+// Extra days the admin put straight into the schedule (not from a request) count as extra work too.
+let xYear=[];
+const schX=uid=>{if(!uid)return 0;const p=sched.people.find(x=>x.user_id==uid);return p?new Set(xYear.filter(e=>e.person_id==p.id&&String(e.day).slice(0,4)==Y&&!String(e.value).includes("*")&&/^\s*\d{1,2}(:\d{2})?\s*[-–]\s*\d{1,2}/.test(e.value)).map(e=>e.day)).size:0};
+const used=(es,k,uid)=>sumY(es,k,s=>s=="approved")+opn(uid,k)+(k=="extra"?schX(uid):0);
+const held=(es,k,uid)=>sumY(es,k,s=>s!="rejected")+opn(uid,k)+(k=="extra"?schX(uid):0);
 const STB={pending:'<span class="badge w">Në pritje</span>',approved:'<span class="badge o">Miratuar</span>',rejected:'<span class="badge r">Refuzuar</span>'};
 const T={vjetor:["Pushimi vjetor",20],mjekesor:["Pushimi mjekësor",20],martese:["Pushimi në rast martese",5],vdekje:["Pushimi në rast vdekjeje të anëtarit të ngushtë të familjes",5],lindje:["Pushim për lindje të fëmijës",3],gjak:["Pushim për dhënie vullnetare të gjakut",2],papagese:["Pushim pa pagesë",0],mjekesor_pp:["Pushim mjekësor pa pagesë",0],bartur:["Pushim i bartur nga viti paraprak",0],kompenzim:["Pushim me kompenzim",0],extra:["Punë extra",0]};
 const SPECIAL=["martese","vdekje","lindje","gjak"],OTHER=["papagese","mjekesor_pp","bartur","kompenzim"],HIDDEN=["bartur","kompenzim","mjekesor_pp"];
@@ -432,6 +435,7 @@ async function loadSched(){
   const days=mDays(smonth),t=today(),t7=addD(t,7),lo=days[0]<t?days[0]:t,hi=days[days.length-1]>t7?days[days.length-1]:t7;
   try{const [p,e]=await Promise.all([sb.from("schedule_people").select("*").order("name"),sb.from("schedule_entries").select("*").gte("day",lo).lte("day",hi)]);
   sched={people:p.data||[],entries:e.data||[]}}catch(err){sched={people:[],entries:[]}}
+  try{const x=await sb.from("schedule_entries").select("person_id,day,value").eq("is_extra",true).is("absence_id",null).not("person_id","is",null).gte("day",Y+"-01-01").lte("day",Y+"-12-31");xYear=x.data||[]}catch(err){xYear=[]}
   try{const o=await sb.from("leave_opening").select("*").eq("year",Y);opening=o.data||[]}catch(err){opening=[]}
 }
 async function shiftMonth(n){const [y,m]=smonth.split("-").map(Number),d=new Date(y,m-1+n,1);smonth=d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0");sedit=null;await loadSched();draw()}
@@ -547,6 +551,8 @@ async function doImport(){
     const del=await sb.from("schedule_entries").delete().gte("day",imp.from).lte("day",imp.to);if(del.error)throw del.error;
     const rows=imp.entries.map(e=>({day:e.day,dept:e.dept,person_id:id[e.name],value:e.value})).concat(imp.extras.map(e=>({day:e.day,dept:e.dept,person_id:e.name?id[e.name]:null,person_label:e.label,value:e.value,is_extra:true})));
     for(let i=0;i<rows.length;i+=500){const r=await sb.from("schedule_entries").insert(rows.slice(i,i+500));if(r.error)throw r.error}
+    // approved leave and extra-work requests in this period go back into the new schedule
+    try{await sb.rpc("resync_absences",{p_from:imp.from,p_to:imp.to})}catch(e){}
     imp=null;await loadSched();draw();
   }catch(e){b.disabled=false;er.textContent="Importi dështoi: "+(e.message||e)}
 }
